@@ -1,4 +1,21 @@
+"use client";
+
+import React from "react";
+import { ProjectState } from "@/lib/types";
+import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 export default function Home() {
+  const [project, setProject] = React.useState<ProjectState>(() => ({
+    m1: { storiesAbove: 0, storiesBelow: 0 },
+    stories: [],
+  }));
+
+  // Whenever M1 counts change, sync M2 story containers
+  React.useEffect(() => {
+    setProject((prev) => ({
+      ...prev,
+      stories: syncStoriesFromCounts(prev.stories, prev.m1.storiesAbove, prev.m1.storiesBelow),
+    }));
+  }, [project.m1.storiesAbove, project.m1.storiesBelow]);
   return (
     <main style={{ padding: "24px", fontFamily: "system-ui, Arial, sans-serif" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -28,8 +45,16 @@ export default function Home() {
             <Field label="Building Height" placeholder={`e.g., 75'-5"`} />
             <Field label="Highest Floor" placeholder={`e.g., 17'-11"`} />
 
-            <Field label="Stories Above Grade" placeholder="(stepper)" />
-            <Field label="Stories Below Grade" placeholder="(stepper)" />
+            <Stepper
+              label="Stories Above Grade"
+              value={project.m1.storiesAbove}
+              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, storiesAbove: v } }))}
+            />
+            <Stepper
+              label="Stories Below Grade"
+              value={project.m1.storiesBelow}
+              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, storiesBelow: v } }))}
+            />
 
             <Field label="Occupancy Groups" placeholder="(output from Module 2)" muted />
             <Field label="Total Above-Grade Area" placeholder="(output from Module 2)" muted />
@@ -73,64 +98,28 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {/* Example story header row */}
-                <tr>
-                  <td style={storyCellStyle}><strong>2</strong></td>
-                  <td style={tdStyle}>—</td>
-                  <td style={tdStyle} colSpan={6}><em style={{ color: "#555" }}>Story 2 (placeholder)</em></td>
-                  <td style={tdStyle}></td>
-                  <td style={tdStyle}>
-                    <small style={{ color: "#555" }}>[+ Area] [– Story]</small>
-                  </td>
-                </tr>
-
-                {/* Example area rows */}
-                <tr>
-                  <td style={tdStyle}></td>
-                  <td style={tdStyle}>1</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(text)</td>
-                  <td style={tdStyle}>(number)</td>
-                  <td style={tdStyle}>(calc)</td>
-                  <td style={tdStyle}>(blank for Area 1)</td>
-                  <td style={tdStyle}></td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}></td>
-                  <td style={tdStyle}>2</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(text)</td>
-                  <td style={tdStyle}>(number)</td>
-                  <td style={tdStyle}>(calc)</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>
-                    <small style={{ color: "#555" }}>[– Area]</small>
-                  </td>
-                </tr>
-
-                {/* Below grade example */}
-                <tr>
-                  <td style={storyCellStyle}><strong>B1</strong></td>
-                  <td style={tdStyle}>—</td>
-                  <td style={tdStyle} colSpan={6}><em style={{ color: "#555" }}>Story B1 (placeholder)</em></td>
-                  <td style={tdStyle}></td>
-                  <td style={tdStyle}>
-                    <small style={{ color: "#555" }}>[+ Area] [– Story]</small>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={tdStyle}></td>
-                  <td style={tdStyle}>1</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(dropdown)</td>
-                  <td style={tdStyle}>(text)</td>
-                  <td style={tdStyle}>(number)</td>
-                  <td style={tdStyle}>(calc)</td>
-                  <td style={tdStyle}>(blank for Area 1)</td>
-                  <td style={tdStyle}></td>
-                </tr>
+                {project.stories.length === 0 ? (
+                  <tr>
+                    <td style={tdStyle} colSpan={9}>
+                      <em style={{ color: "#555" }}>
+                        Increase Stories Above Grade or Stories Below Grade in Module 1 to begin.
+                      </em>
+                    </td>
+                  </tr>
+                ) : (
+                  project.stories.map((story) => (
+                    <tr key={story.id}>
+                      <td style={storyCellStyle}><strong>{story.id}</strong></td>
+                      <td style={tdStyle}>—</td>
+                      <td style={tdStyle} colSpan={6}>
+                        <em style={{ color: "#555" }}>Story {story.id} (areas: {story.areas.length})</em>
+                      </td>
+                      <td style={tdStyle}>
+                        <small style={{ color: "#555" }}>[+ Area] [{story.areas.length === 1 ? "– Story" : "– Area"}]</small>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -192,6 +181,45 @@ function Chip(props: { children: React.ReactNode }) {
   );
 }
 
+function Stepper(props: { label: string; value: number; onChange: (v: number) => void }) {
+  const { label, value, onChange } = props;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          style={miniBtnStyle}
+          aria-label={`Decrease ${label}`}
+        >
+          –
+        </button>
+        <div
+          style={{
+            border: "1px solid #cfcfcf",
+            borderRadius: 8,
+            padding: "10px 12px",
+            minWidth: 56,
+            textAlign: "center",
+            background: "#fff",
+          }}
+        >
+          {value}
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          style={miniBtnStyle}
+          aria-label={`Increase ${label}`}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Styles */
 const cardStyle: React.CSSProperties = {
   border: "1px solid #d6d6d6",
@@ -199,6 +227,17 @@ const cardStyle: React.CSSProperties = {
   padding: 16,
   background: "#fff",
   marginBottom: 14,
+};
+
+const miniBtnStyle: React.CSSProperties = {
+  border: "1px solid #cfcfcf",
+  borderRadius: 10,
+  padding: "8px 10px",
+  fontSize: 14,
+  background: "#fafafa",
+  color: "#333",
+  cursor: "pointer",
+  lineHeight: 1,
 };
 
 const cardHeaderStyle: React.CSSProperties = {
