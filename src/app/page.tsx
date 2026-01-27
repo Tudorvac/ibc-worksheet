@@ -45,15 +45,15 @@ export default function Home() {
             <Field label="Building Height" placeholder={`e.g., 75'-5"`} />
             <Field label="Highest Floor" placeholder={`e.g., 17'-11"`} />
 
-            <Stepper
+            <Field
               label="Stories Above Grade"
-              value={project.m1.storiesAbove}
-              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, storiesAbove: v } }))}
+              placeholder={String(countAboveStories(project))}
+              muted
             />
-            <Stepper
+            <Field
               label="Stories Below Grade"
-              value={project.m1.storiesBelow}
-              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, storiesBelow: v } }))}
+              placeholder={String(countBelowStories(project))}
+              muted
             />
 
             <Field label="Occupancy Groups" placeholder="(output from Module 2)" muted />
@@ -69,17 +69,64 @@ export default function Home() {
               <div style={moduleTagStyle}>MOD 2</div>
               <h2 style={cardTitleStyle}>Building Heights & Areas</h2>
               <p style={{ margin: "6px 0 0", color: "#444", maxWidth: 900 }}>
-                Stories are generated from Module 1. Each story can contain up to 4 areas.
-                Area controls will be story-scoped (Option 1).
+                Is this user friendly?
               </p>
             </div>
           </div>
 
           {/* Controls placeholder (we will refine button placement next) */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <Chip>+ Story (Above)</Chip>
-            <Chip>+ Story (Below)</Chip>
-            <Chip>+ Area (Selected Story)</Chip>
+            <button
+              type="button"
+              style={miniBtnStyle}
+              onClick={() =>
+                setProject((p) => ({
+                  ...p,
+                  m1: { ...p.m1, storiesAbove: p.m1.storiesAbove + 1 },
+                }))
+              }
+            >
+              + Story (Above)
+            </button>
+
+            <button
+              type="button"
+              style={miniBtnStyle}
+              onClick={() =>
+                setProject((p) => ({
+                  ...p,
+                  m1: { ...p.m1, storiesAbove: Math.max(0, p.m1.storiesAbove - 1) },
+                }))
+              }
+            >
+              – Story (Above)
+            </button>
+
+            <button
+              type="button"
+              style={miniBtnStyle}
+              onClick={() =>
+                setProject((p) => ({
+                  ...p,
+                  m1: { ...p.m1, storiesBelow: p.m1.storiesBelow + 1 },
+                }))
+              }
+            >
+              + Story (Below)
+            </button>
+
+            <button
+              type="button"
+              style={miniBtnStyle}
+              onClick={() =>
+                setProject((p) => ({
+                  ...p,
+                  m1: { ...p.m1, storiesBelow: Math.max(0, p.m1.storiesBelow - 1) },
+                }))
+              }
+            >
+              – Story (Below)
+            </button>
           </div>
 
           <div style={tableWrapStyle}>
@@ -140,6 +187,14 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+function countAboveStories(project: ProjectState): number {
+  return project.stories.filter((s) => s.kind === "above").length;
+}
+
+function countBelowStories(project: ProjectState): number {
+  return project.stories.filter((s) => s.kind === "below").length;
 }
 
 /** Small components (layout only) */
