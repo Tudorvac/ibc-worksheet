@@ -5,7 +5,16 @@ import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 export default function Home() {
   const [project, setProject] = React.useState<ProjectState>(() => ({
-    m1: { storiesAbove: 0, storiesBelow: 0 },
+    m1: {
+      storiesAbove: 0,
+      storiesBelow: 0,
+      constructionType: "",
+      sprinklers: "",
+      fireAlarm: "",
+      buildingHeight: { feet: null, inches: null },
+      highestFloor: { feet: null, inches: null },
+    },
+
     stories: [],
   }));
 
@@ -38,27 +47,39 @@ export default function Home() {
           </div>
 
           <div style={gridStyle}>
-            <Field label="Construction Type" placeholder="(dropdown)" />
-            <Field label="Sprinklers" placeholder="(dropdown)" />
-            <Field label="Fire Alarm" placeholder="(dropdown)" />
-
-            <Field label="Building Height" placeholder={`e.g., 75'-5"`} />
-            <Field label="Highest Floor" placeholder={`e.g., 17'-11"`} />
-
+            <Field label="Occupancy Groups" placeholder="(output from Module 2)" muted />
             <Field
               label="Stories Above Grade"
               placeholder={String(countAboveStories(project))}
               muted
             />
+            <Field label="Total Above-Grade Area" placeholder="(output from Module 2)" muted />
+            
+            <Field label="Construction Type" placeholder="(dropdown)" />
             <Field
               label="Stories Below Grade"
               placeholder={String(countBelowStories(project))}
               muted
             />
-
-            <Field label="Occupancy Groups" placeholder="(output from Module 2)" muted />
-            <Field label="Total Above-Grade Area" placeholder="(output from Module 2)" muted />
             <Field label="Total Below-Grade Area" placeholder="(output from Module 2)" muted />
+            
+            <Field label="Sprinklers" placeholder="(dropdown)" />
+            <FeetInchesInput
+              label="Building Height"
+              value={project.m1.buildingHeight}
+              onChange={(next) =>
+                setProject((p) => ({ ...p, m1: { ...p.m1, buildingHeight: next } }))
+              }
+            />
+            <FeetInchesInput
+              label="Highest Floor"
+              value={project.m1.highestFloor}
+              onChange={(next) =>
+                setProject((p) => ({ ...p, m1: { ...p.m1, highestFloor: next } }))
+              }
+            />
+
+            <Field label="Fire Alarm" placeholder="(dropdown)" />         
           </div>
         </section>
 
@@ -273,6 +294,92 @@ function Stepper(props: { label: string; value: number; onChange: (v: number) =>
       </div>
     </div>
   );
+}
+
+function FeetInchesInput(props: {
+  label: string;
+  value: { feet: number | null; inches: number | null };
+  onChange: (v: { feet: number | null; inches: number | null }) => void;
+}) {
+  const { label, value, onChange } = props;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <NumBox
+          placeholder="ft"
+          value={value.feet}
+          onChange={(feet) => onChange({ ...value, feet })}
+          min={0}
+        />
+        <span style={{ color: "#333" }}>ft</span>
+
+        <NumBox
+          placeholder="in"
+          value={value.inches}
+          onChange={(inches) => onChange({ ...value, inches })}
+          min={0}
+          max={11}
+        />
+        <span style={{ color: "#333" }}>in</span>
+
+        <span style={{ color: "#666", fontSize: 12 }}>
+          ({formatFeetInches(value)})
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NumBox(props: {
+  placeholder: string;
+  value: number | null;
+  onChange: (n: number | null) => void;
+  min?: number;
+  max?: number;
+}) {
+  const { placeholder, value, onChange, min, max } = props;
+
+  return (
+    <input
+      inputMode="numeric"
+      placeholder={placeholder}
+      value={value ?? ""}
+      onChange={(e) => {
+        const raw = e.target.value.trim();
+        if (raw === "") return onChange(null);
+        const n = Number(raw);
+        if (!Number.isFinite(n)) return;
+
+        const bounded =
+          typeof min === "number" ? Math.max(min, n) : n;
+
+        const bounded2 =
+          typeof max === "number" ? Math.min(max, bounded) : bounded;
+
+        onChange(Math.floor(bounded2));
+      }}
+      style={{
+        border: "1px solid #cfcfcf",
+        borderRadius: 8,
+        padding: "10px 12px",
+        width: 70,
+        background: "#fff",
+        color: "#111",       // ← fixes contrast
+        fontWeight: 500,     // ← improves legibility
+      }}
+    />
+  );
+}
+
+function formatFeetInches(v: { feet: number | null; inches: number | null }): string {
+  const ft = v.feet ?? 0;
+  const inch = v.inches ?? 0;
+  // Display only if at least one field is entered
+  if (v.feet === null && v.inches === null) return "—";
+  return `${ft}'-${inch}"`;
 }
 
 /** Styles */

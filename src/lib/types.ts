@@ -22,9 +22,21 @@ export interface Story {
   areas: AreaRow[];         // always at least Area 1
 }
 
+export interface FeetInches {
+  feet: number | null;   // null = not entered
+  inches: number | null; // null = not entered (0–11 later)
+}
+
 export interface Module1State {
-  storiesAbove: number;     // 0..?
-  storiesBelow: number;     // 0..?
+  storiesAbove: number;
+  storiesBelow: number;
+
+  constructionType: string;
+  sprinklers: string;
+  fireAlarm: string;
+
+  buildingHeight: FeetInches;
+  highestFloor: FeetInches;
 }
 
 export interface ProjectState {
