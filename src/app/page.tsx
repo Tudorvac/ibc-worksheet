@@ -47,23 +47,42 @@ export default function Home() {
           </div>
 
           <div style={gridStyle}>
-            <Field label="Occupancy Groups" placeholder="(output from Module 2)" muted />
+            <Field label="Occupancy Groups" placeholder={occupancyGroups(project)} muted />
             <Field
               label="Stories Above Grade"
               placeholder={String(countAboveStories(project))}
               muted
             />
-            <Field label="Total Above-Grade Area" placeholder="(output from Module 2)" muted />
+            <Field
+              label="Total Above-Grade Area"
+              placeholder={totalAboveGradeArea(project).toLocaleString()}
+              muted
+            />
             
-            <Field label="Construction Type" placeholder="(dropdown)" />
+            <SelectField
+              label="Construction Type"
+              value={project.m1.constructionType}
+              options={CONSTRUCTION_TYPES}
+              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, constructionType: v } }))}
+            />
             <Field
               label="Stories Below Grade"
               placeholder={String(countBelowStories(project))}
               muted
             />
-            <Field label="Total Below-Grade Area" placeholder="(output from Module 2)" muted />
+            <Field
+              label="Total Below-Grade Area"
+              placeholder={totalBelowGradeArea(project).toLocaleString()}
+              muted
+            />
             
-            <Field label="Sprinklers" placeholder="(dropdown)" />
+            <SelectField
+              label="Sprinklers"
+              value={project.m1.sprinklers}
+              options={YES_NO}
+              placeholder="Select…"
+              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, sprinklers: v } }))}
+            />
             <FeetInchesInput
               label="Building Height"
               value={project.m1.buildingHeight}
@@ -79,7 +98,13 @@ export default function Home() {
               }
             />
 
-            <Field label="Fire Alarm" placeholder="(dropdown)" />         
+            <SelectField
+              label="Fire Alarm"
+              value={project.m1.fireAlarm}
+              options={YES_NO}
+              placeholder="Select…"
+              onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, fireAlarm: v } }))}
+            />         
           </div>
         </section>
 
@@ -218,6 +243,35 @@ function countBelowStories(project: ProjectState): number {
   return project.stories.filter((s) => s.kind === "below").length;
 }
 
+function sumStorySqft(story: { areas: { sqft: number | null }[] }): number {
+  return story.areas.reduce((acc, a) => acc + (a.sqft ?? 0), 0);
+}
+
+function totalAboveGradeArea(project: ProjectState): number {
+  return project.stories
+    .filter((s) => s.kind === "above")
+    .reduce((acc, s) => acc + sumStorySqft(s), 0);
+}
+
+function totalBelowGradeArea(project: ProjectState): number {
+  return project.stories
+    .filter((s) => s.kind === "below")
+    .reduce((acc, s) => acc + sumStorySqft(s), 0);
+}
+
+function occupancyGroups(project: ProjectState): string {
+  const set = new Set<string>();
+  for (const story of project.stories) {
+    for (const area of story.areas) {
+      const occ = (area.occupancy ?? "").trim();
+      if (occ) set.add(occ);
+    }
+  }
+  const arr = Array.from(set);
+  arr.sort();
+  return arr.length ? arr.join(", ") : "—";
+}
+
 /** Small components (layout only) */
 
 function Field(props: { label: string; placeholder: string; muted?: boolean }) {
@@ -236,6 +290,41 @@ function Field(props: { label: string; placeholder: string; muted?: boolean }) {
       >
         {placeholder}
       </div>
+    </div>
+  );
+}
+function SelectField(props: {
+  label: string;
+  value: string;
+  options: string[];
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  const { label, value, options, placeholder, onChange } = props;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          border: "1px solid #cfcfcf",
+          borderRadius: 8,
+          padding: "10px 12px",
+          background: "#fff",
+          color: "#111",
+          fontWeight: 500,
+          appearance: "auto",
+        }}
+      >
+        <option value="">{placeholder ?? "Select…"}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -467,3 +556,6 @@ const storyCellStyle: React.CSSProperties = {
   ...tdStyle,
   background: "#f7f7f7",
 };
+
+const CONSTRUCTION_TYPES = ["I-A", "I-B", "II-A", "II-B", "III-A", "III-B", "IV", "V-A", "V-B"];
+const YES_NO = ["Yes", "No"];
