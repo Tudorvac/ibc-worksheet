@@ -3,6 +3,7 @@
 import React from "react";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
+import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 export default function Home() {
   const [project, setProject] = React.useState<ProjectState>(() => ({
     m1: {
@@ -17,6 +18,22 @@ export default function Home() {
 
     stories: [],
   }));
+
+  const [dropdownData, setDropdownData] = React.useState<DropdownData>({
+    lists: {},
+    usesByOccupancy: {},
+  });
+
+  React.useEffect(() => {
+    (async () => {
+     try {
+      const data = await loadDropdownsXlsx("/dropdowns.xlsx");
+      setDropdownData(data);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
   // Whenever M1 counts change, sync M2 story containers
   React.useEffect(() => {
@@ -62,7 +79,7 @@ export default function Home() {
             <SelectField
               label="Construction Type"
               value={project.m1.constructionType}
-              options={CONSTRUCTION_TYPES}
+              options={dropdownData.lists["Construction Type"] ?? []}
               onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, constructionType: v } }))}
             />
             <Field
@@ -79,7 +96,7 @@ export default function Home() {
             <SelectField
               label="Sprinklers"
               value={project.m1.sprinklers}
-              options={YES_NO}
+              options={dropdownData.lists["Fire Sprinklers"] ?? []}
               placeholder="Select…"
               onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, sprinklers: v } }))}
             />
@@ -101,7 +118,7 @@ export default function Home() {
             <SelectField
               label="Fire Alarm"
               value={project.m1.fireAlarm}
-              options={YES_NO}
+              options={dropdownData.lists["Fire Alarm"] ?? []}
               placeholder="Select…"
               onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, fireAlarm: v } }))}
             />         
