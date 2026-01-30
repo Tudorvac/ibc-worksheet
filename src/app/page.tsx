@@ -36,6 +36,56 @@ export default function Home() {
     }));
   }
 
+  function addArea(storyId: string) {
+    setProject((prev) => ({
+      ...prev,
+      stories: prev.stories.map((s) => {
+        if (s.id !== storyId) return s;
+        if (s.areas.length >= 4) return s;
+
+        const nextAreaNo = (s.areas.length + 1) as 2 | 3 | 4;
+        return {
+          ...s,
+          areas: [
+            ...s.areas,
+            {
+              areaNo: nextAreaNo,
+              occupancy: "",
+              use: "",
+              description: "",
+              sqft: null,
+              mixedUse: "",
+            },
+          ],
+        };
+      }),
+    }));
+  }
+
+  function removeHighestArea(storyId: string) {
+    setProject((prev) => ({
+      ...prev,
+      stories: prev.stories.map((s) => {
+        if (s.id !== storyId) return s;
+        if (s.areas.length <= 1) return s; // nothing to remove
+        return { ...s, areas: s.areas.slice(0, -1) };
+      }),
+    }));
+  }
+
+  function removeStory(storyId: string) {
+    setProject((prev) => ({
+      ...prev,
+      m1: {
+        ...prev.m1,
+        // keep counts in sync with deletions:
+        storiesAbove: prev.stories.filter((s) => s.kind === "above" && s.id !== storyId).length,
+        storiesBelow: prev.stories.filter((s) => s.kind === "below" && s.id !== storyId).length,
+      },
+      stories: prev.stories.filter((s) => s.id !== storyId),
+    }));
+  }
+
   function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4, occ: string) {
     // If occupancy changes, clear use to prevent invalid combos
     updateArea(storyId, areaNo, { occupancy: occ, use: "" });
@@ -304,7 +354,26 @@ export default function Home() {
                             </td>
 
                             <td style={tdStyle}>
-                              <span style={{ color: "#888", fontSize: 12 }}>—</span>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {/* + Area appears only on Area 1 row */}
+                                {area.areaNo === 1 && (
+                                  <TableAction
+                                    label="+ Area"
+                                    onClick={() => addArea(story.id)}
+                                    disabled={story.areas.length >= 4}
+                                  />
+                                )}
+
+                                {/* – Area appears only on highest area row, when there are 2+ areas */}
+                                {story.areas.length > 1 && area.areaNo === story.areas[story.areas.length - 1].areaNo && (
+                                  <TableAction label="– Area" onClick={() => removeHighestArea(story.id)} />
+                                )}
+
+                                {/* – Story appears only when story has Area 1 only, and only on Area 1 row */}
+                                {area.areaNo === 1 && story.areas.length === 1 && (
+                                  <TableAction label="– Story" onClick={() => removeStory(story.id)} />
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -436,6 +505,31 @@ function SelectField(props: {
         ))}
       </select>
     </div>
+  );
+}
+
+function TableAction(props: { label: string; onClick: () => void; disabled?: boolean }) {
+  const { label, onClick, disabled } = props;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        border: "1px solid #cfcfcf",
+        borderRadius: 10,
+        padding: "6px 8px",
+        background: disabled ? "#f6f6f6" : "#fafafa",
+        color: disabled ? "#888" : "#222",
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: disabled ? "not-allowed" : "pointer",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
