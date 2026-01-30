@@ -19,6 +19,28 @@ export default function Home() {
     stories: [],
   }));
 
+  function updateArea(
+    storyId: string,
+    areaNo: 1 | 2 | 3 | 4,
+    patch: Partial<{ occupancy: string; use: string; description: string; sqft: number | null; mixedUse: string }>
+  ) {
+    setProject((prev) => ({
+      ...prev,
+      stories: prev.stories.map((s) => {
+        if (s.id !== storyId) return s;
+        return {
+          ...s,
+          areas: s.areas.map((a) => (a.areaNo === areaNo ? { ...a, ...patch } : a)),
+        };
+      }),
+    }));
+  }
+
+  function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4, occ: string) {
+    // If occupancy changes, clear use to prevent invalid combos
+    updateArea(storyId, areaNo, { occupancy: occ, use: "" });
+  }
+
   const [dropdownData, setDropdownData] = React.useState<DropdownData>({
     lists: {},
     usesByOccupancy: {},
@@ -59,7 +81,7 @@ export default function Home() {
           <div style={cardHeaderStyle}>
             <div>
               <div style={moduleTagStyle}>MOD 1</div>
-              <h2 style={cardTitleStyle}>Building Information</h2>
+              <h2 style={cardTitleStyle}>General Building Information</h2>
             </div>
           </div>
 
@@ -130,10 +152,7 @@ export default function Home() {
           <div style={cardHeaderStyle}>
             <div>
               <div style={moduleTagStyle}>MOD 2</div>
-              <h2 style={cardTitleStyle}>Building Heights & Areas</h2>
-              <p style={{ margin: "6px 0 0", color: "#444", maxWidth: 900 }}>
-                Is this user friendly?
-              </p>
+              <h2 style={cardTitleStyle}>Building Heights & Areas</h2>              
             </div>
           </div>
 
@@ -212,22 +231,85 @@ export default function Home() {
                   <tr>
                     <td style={tdStyle} colSpan={9}>
                       <em style={{ color: "#555" }}>
-                        Increase Stories Above Grade or Stories Below Grade in Module 1 to begin.
+                        Increase stories using the Module 2 controls above.
                       </em>
                     </td>
                   </tr>
                 ) : (
                   project.stories.map((story) => (
-                    <tr key={story.id}>
-                      <td style={storyCellStyle}><strong>{story.id}</strong></td>
-                      <td style={tdStyle}>—</td>
-                      <td style={tdStyle} colSpan={6}>
-                        <em style={{ color: "#555" }}>Story {story.id} (areas: {story.areas.length})</em>
-                      </td>
-                      <td style={tdStyle}>
-                        <small style={{ color: "#555" }}>[+ Area] [{story.areas.length === 1 ? "– Story" : "– Area"}]</small>
-                      </td>
-                    </tr>
+                    <React.Fragment key={story.id}>
+                      {/* Area rows */}
+                      {story.areas.map((area) => {
+                        const occOptions = dropdownData.lists["Occupancy"] ?? [];
+                        const useOptions = dropdownData.usesByOccupancy[area.occupancy] ?? [];
+                        const mixedUseOptions = dropdownData.lists["Mixed Use"] ?? [];
+
+                        return (
+                          <tr key={`${story.id}-${area.areaNo}`}>
+                            <td style={area.areaNo === 1 ? storyCellStyle : tdStyle}>
+                              {area.areaNo === 1 ? <strong>{story.id}</strong> : ""}
+                            </td>
+                            <td style={tdStyle}>{area.areaNo}</td>
+
+                            <td style={tdStyle}>
+                              <TableSelect
+                                value={area.occupancy}
+                                options={occOptions}
+                                placeholder="Occupancy…"
+                                onChange={(v) => onOccupancyChange(story.id, area.areaNo, v)}
+                              />
+                            </td>
+
+                            <td style={tdStyle}>
+                              <TableSelect
+                                value={area.use}
+                                options={useOptions}
+                                placeholder={area.occupancy ? "Use…" : "Select occupancy first"}
+                                disabled={!area.occupancy}
+                                onChange={(v) => updateArea(story.id, area.areaNo, { use: v })}
+                              />
+                            </td>
+
+                            <td style={tdStyle}>
+                              <TableTextInput
+                                value={area.description}
+                                placeholder="Room/Area description..."
+                                onChange={(v) => updateArea(story.id, area.areaNo, { description: v })}
+                              />
+                            </td>
+
+                            <td style={tdStyle}>
+                              <TableNumberInput
+                                value={area.sqft}
+                                placeholder="Sq. Ft."
+                                onChange={(v) => updateArea(story.id, area.areaNo, { sqft: v })}
+                              />
+                            </td>
+
+                            <td style={tdStyle}>
+                              <span style={{ color: "#666" }}>—</span>
+                            </td>
+
+                            <td style={tdStyle}>
+                              {area.areaNo === 1 ? (
+                                <span style={{ color: "#666" }}>—</span>
+                              ) : (
+                                <TableSelect
+                                  value={area.mixedUse}
+                                  options={mixedUseOptions}
+                                  placeholder="Mixed Use…"
+                                  onChange={(v) => updateArea(story.id, area.areaNo, { mixedUse: v })}
+                                />
+                              )}
+                            </td>
+
+                            <td style={tdStyle}>
+                              <span style={{ color: "#888", fontSize: 12 }}>—</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
                   ))
                 )}
               </tbody>
@@ -278,15 +360,25 @@ function totalBelowGradeArea(project: ProjectState): number {
 
 function occupancyGroups(project: ProjectState): string {
   const set = new Set<string>();
+
   for (const story of project.stories) {
     for (const area of story.areas) {
       const occ = (area.occupancy ?? "").trim();
       if (occ) set.add(occ);
     }
   }
+
   const arr = Array.from(set);
   arr.sort();
-  return arr.length ? arr.join(", ") : "—";
+
+  if (arr.length === 0) return "—";
+
+  return arr
+    .map((val, idx) => {
+      if (idx === 0) return val;
+      return val.replace(/^Group\s+/i, "");
+    })
+    .join(", ");
 }
 
 /** Small components (layout only) */
@@ -310,6 +402,7 @@ function Field(props: { label: string; placeholder: string; muted?: boolean }) {
     </div>
   );
 }
+
 function SelectField(props: {
   label: string;
   value: string;
@@ -343,6 +436,103 @@ function SelectField(props: {
         ))}
       </select>
     </div>
+  );
+}
+
+function TableSelect(props: {
+  value: string;
+  options: string[];
+  placeholder?: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const { value, options, placeholder, disabled, onChange } = props;
+
+  return (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        border: "1px solid #cfcfcf",
+        borderRadius: 8,
+        padding: "8px 10px",
+        background: disabled ? "#f6f6f6" : "#fff",
+        color: disabled ? "#777" : "#111",
+        fontWeight: 500,
+      }}
+    >
+      <option value="">{placeholder ?? "Select…"}</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function TableTextInput(props: {
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  const { value, placeholder, onChange } = props;
+
+  return (
+    <input
+      value={value}
+      placeholder={placeholder ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        border: "1px solid #cfcfcf",
+        borderRadius: 8,
+        padding: "8px 10px",
+        background: "#fff",
+        color: "#111",
+        fontWeight: 500,
+      }}
+    />
+  );
+}
+
+function TableNumberInput(props: {
+  value: number | null;
+  placeholder?: string;
+  onChange: (v: number | null) => void;
+}) {
+  const { value, placeholder, onChange } = props;
+
+  const display = value === null ? "" : value.toLocaleString();
+
+  return (
+    <input
+      inputMode="numeric"
+      value={display}
+      placeholder={placeholder ?? ""}
+      onChange={(e) => {
+        const raw = e.target.value.trim();
+        if (raw === "") return onChange(null);
+
+        // remove commas so we can parse
+        const normalized = raw.replace(/,/g, "");
+        const n = Number(normalized);
+        if (!Number.isFinite(n)) return;
+
+        onChange(Math.max(0, Math.floor(n))); // whole number, non-negative
+      }}
+      style={{
+        width: "100%",
+        border: "1px solid #cfcfcf",
+        borderRadius: 8,
+        padding: "8px 10px",
+        background: "#fff",
+        color: "#111",
+        fontWeight: 500,
+      }}
+    />
   );
 }
 
@@ -529,8 +719,9 @@ const moduleTagStyle: React.CSSProperties = {
 
 const cardTitleStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 16,
+  fontSize: 18,
   fontWeight: 700,
+  color: "#555",
 };
 
 const gridStyle: React.CSSProperties = {
