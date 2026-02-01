@@ -61,6 +61,28 @@ export default function Home() {
       }),
     }));
   }
+  function deleteAreaRow(storyId: string, areaNo: 2 | 3 | 4) {
+    setProject((prev) => ({
+      ...prev,
+      stories: prev.stories.map((s) => {
+        if (s.id !== storyId) return s;
+
+        // Remove the requested row
+        const remaining = s.areas.filter((a) => a.areaNo !== areaNo);
+
+        // Renumber sequentially (Area 1 stays first; others shift down)
+        const renumbered = remaining
+          .slice()
+          .sort((a, b) => a.areaNo - b.areaNo)
+          .map((a, idx) => ({
+            ...a,
+            areaNo: (idx + 1) as 1 | 2 | 3 | 4,
+          }));
+
+        return { ...s, areas: renumbered };
+      }),
+    }));
+  }
 
   function removeHighestArea(storyId: string) {
     setProject((prev) => ({
@@ -279,8 +301,8 @@ export default function Home() {
                   <th style={thStyle}>Occupancy</th>
                   <th style={thStyle}>Use</th>
                   <th style={thStyle}>Description</th>
-                  <th style={thStyle}>Sq. Ft.</th>
-                  <th style={thStyle}>%</th>
+                  <th style={thRightStyle}>Sq. Ft.</th>
+                  <th style={thRightStyle}>%</th>
                   <th style={thStyle}>Mixed Use</th>
                   <th style={thStyle}>Controls</th>
                 </tr>
@@ -312,7 +334,7 @@ export default function Home() {
                           const rowStyle: React.CSSProperties = {
                             // darker separator under each story row (Area 1 row)
                             borderBottom: isStoryRow ? "1px solid #d0d0d0" : "1px solid #efefef",
-
+                            background: isStoryRow ? "#fafafa" : "#fff",
                             // grade-line emphasis above first below-grade story
                             borderTop:
                               isStoryRow && isFirstBelowGrade ? "2px solid #a8a8a8" : undefined,
@@ -355,7 +377,7 @@ export default function Home() {
                                 />
                               </td>
 
-                              <td style={tdStyle}>
+                              <td style={tdRightStyle}>
                                 <TableNumberInput
                                   value={area.sqft}
                                   placeholder="Sq. Ft."
@@ -363,7 +385,7 @@ export default function Home() {
                                 />
                               </td>
 
-                              <td style={tdStyle}>
+                              <td style={tdRightStyle}>
                                 <span style={{ color: "#333", fontWeight: 600 }}>
                                   {areaPercent(story, area.sqft)}
                                 </span>
@@ -386,37 +408,32 @@ export default function Home() {
                               </td>
 
                               <td style={tdStyle}>
+                                {/* Area 1: – Story (disabled if attached rows exist) + + Area */}
                                 {area.areaNo === 1 ? (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 4,
-                                      width: 92,
-                                    }}
-                                  >
-                                    <TableAction
-                                      label="– Story"
-                                      onClick={() => removeStory(story.id)}
-                                      disabled={story.areas.length !== 1}
-                                    />
-                                    <TableAction
-                                      label="+ Area"
-                                      onClick={() => addArea(story.id)}
-                                      disabled={story.areas.length >= 4}
-                                    />
+                                  <div style={{ display: "flex", gap: 6, width: 120 }}>
+                                    <div style={{ flex: 1 }}>
+                                      <TableAction
+                                        label="– Story"
+                                        onClick={() => removeStory(story.id)}
+                                        disabled={story.areas.length !== 1}
+                                      />
+                                    </div>
+
+                                    <div style={{ flex: 1 }}>
+                                      <TableAction
+                                        label="+ Area"
+                                        onClick={() => addArea(story.id)}
+                                        disabled={story.areas.length >= 4}
+                                      />
+                                    </div>
                                   </div>
                                 ) : (
-                                  <div style={{ width: 92 }}>
-                                    {story.areas.length > 1 &&
-                                    area.areaNo === story.areas[story.areas.length - 1].areaNo ? (
-                                      <TableAction
-                                        label="– Area"
-                                        onClick={() => removeHighestArea(story.id)}
-                                      />
-                                    ) : (
-                                      <span style={{ color: "#888", fontSize: 12 }}>—</span>
-                                    )}
+                                  /* Area 2–4: – Row (always available on that row) */
+                                  <div style={{ width: 120 }}>
+                                    <TableAction
+                                      label="– Row"
+                                      onClick={() => deleteAreaRow(story.id, area.areaNo as 2 | 3 | 4)}
+                                    />
                                   </div>
                                 )}
                               </td>
@@ -572,7 +589,7 @@ function TableAction(props: { label: string; onClick: () => void; disabled?: boo
         cursor: disabled ? "not-allowed" : "pointer",
         lineHeight: 1.1,
         whiteSpace: "nowrap",
-        width: "60%",               // makes stacking clean
+        width: "100%",              // makes stacking clean
       }}
     >
       {label}
@@ -598,7 +615,7 @@ function TableSelect(props: {
         width: "100%",
         border: "1px solid #cfcfcf",
         borderRadius: 8,
-        padding: "6px 8px",
+        padding: "4px 8px",
         background: disabled ? "#f6f6f6" : "#fff",
         color: disabled ? "#777" : "#111",
         fontWeight: 500,
@@ -630,7 +647,7 @@ function TableTextInput(props: {
         width: "100%",
         border: "1px solid #cfcfcf",
         borderRadius: 8,
-        padding: "6px 8px",
+        padding: "4px 8px",
         background: "#fff",
         color: "#111",
         fontWeight: 500,
@@ -665,10 +682,11 @@ function TableNumberInput(props: {
         onChange(Math.max(0, Math.floor(n))); // whole number, non-negative
       }}
       style={{
-        width: "100%",
+        width: 84,     // fits "9,999,999"
+        textAlign: "right",
         border: "1px solid #cfcfcf",
         borderRadius: 8,
-        padding: "6px 8px",
+        padding: "4px 8px",
         background: "#fff",
         color: "#111",
         fontWeight: 500,
@@ -883,10 +901,29 @@ const tableStyle: React.CSSProperties = {
   minWidth: 980,
 };
 
+const tdRightStyle: React.CSSProperties = {
+  fontSize: 12,
+  padding: "4px 8px",                 // was 10px 10px
+  borderBottom: "1px solid #efefef",   // lighter area-row lines
+  verticalAlign: "top",
+  whiteSpace: "nowrap",
+  textAlign: "right",
+};
+
+const thRightStyle: React.CSSProperties = {
+  fontSize: 12,
+  padding: "4px 8px",                 // was 10px 10px
+  borderBottom: "1px solid #d0d0d0",   // slightly darker header line
+  background: "#fafafa",
+  color: "#333",
+  whiteSpace: "nowrap",
+  textAlign: "right",
+};
+
 const thStyle: React.CSSProperties = {
   textAlign: "left",
   fontSize: 12,
-  padding: "7px 8px",                 // was 10px 10px
+  padding: "4px 8px",                 // was 10px 10px
   borderBottom: "1px solid #d0d0d0",   // slightly darker header line
   background: "#fafafa",
   color: "#333",
@@ -895,9 +932,9 @@ const thStyle: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
   fontSize: 12,
-  padding: "6px 8px",                 // was 10px 10px
+  padding: "4px 8px",                 // was 10px 10px
   borderBottom: "1px solid #efefef",   // lighter area-row lines
-  verticalAlign: "top",
+  verticalAlign: "middle",
   whiteSpace: "nowrap",
 };
 
