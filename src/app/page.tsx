@@ -96,25 +96,61 @@ export default function Home() {
   }
 
   function removeStory(storyId: string) {
-    setProject((prev) => ({
-      ...prev,
-      m1: {
-        ...prev.m1,
-        // keep counts in sync with deletions:
-        storiesAbove: prev.stories.filter((s) => s.kind === "above" && s.id !== storyId).length,
-        storiesBelow: prev.stories.filter((s) => s.kind === "below" && s.id !== storyId).length,
-      },
-      stories: prev.stories.filter((s) => s.id !== storyId),
+    setProject((prev) => {
+      const target = prev.stories.find((s) => s.id === storyId);
+      if (!target) return prev;
+
+    // Remove the selected story
+    const remaining = prev.stories.filter((s) => s.id !== storyId);
+
+    // Split by kind
+    const above = remaining.filter((s) => s.kind === "above");
+    const below = remaining.filter((s) => s.kind === "below");
+
+    // Sort existing stories in their current logical order
+    const aboveSorted = [...above].sort((a, b) => Number(b.id) - Number(a.id)); // 5,4,3...
+    const belowSorted = [...below].sort(
+      (a, b) => Number(a.id.replace(/^B/i, "")) - Number(b.id.replace(/^B/i, ""))
+    ); // B1,B2...
+
+    // Renumber to close gaps while preserving data payload
+    const aboveRenumbered = aboveSorted.map((s, idx) => ({
+      ...s,
+      id: String(aboveSorted.length - idx), // 4,3,2,1 top-down
     }));
+
+    const belowRenumbered = belowSorted.map((s, idx) => ({
+      ...s,
+      id: `B${idx + 1}`, // B1,B2,...
+      }));
+
+      const stories = [...aboveRenumbered, ...belowRenumbered];
+
+      return {
+        ...prev,
+        stories,
+        m1: {
+          ...prev.m1,
+          storiesAbove: aboveRenumbered.length,
+          storiesBelow: belowRenumbered.length,
+        },
+      };
+    });
   }
+  
   function storyTotalSqft(story: { areas: { sqft: number | null }[] }): number {
     return story.areas.reduce((sum, a) => sum + (a.sqft ?? 0), 0);
   }
 
-  function areaPercent(story: { areas: { sqft: number | null }[] }, areaSqft: number | null): string {
+    function areaPercent(
+    story: { areas: { sqft: number | null }[] },
+    areaSqft: number | null
+  ): string {
     const total = storyTotalSqft(story);
     if (!total || !areaSqft) return "—";
-    return `${Math.round((areaSqft / total) * 100)}%`;
+
+    const pct = (areaSqft / total) * 100;
+    return pct === 100 ? "100%" : `${pct.toFixed(1)}%`;
   }
 
   function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4, occ: string) {
@@ -258,37 +294,11 @@ export default function Home() {
               onClick={() =>
                 setProject((p) => ({
                   ...p,
-                  m1: { ...p.m1, storiesAbove: Math.max(0, p.m1.storiesAbove - 1) },
-                }))
-              }
-            >
-              – Story (Above)
-            </button>
-
-            <button
-              type="button"
-              style={miniBtnStyle}
-              onClick={() =>
-                setProject((p) => ({
-                  ...p,
                   m1: { ...p.m1, storiesBelow: p.m1.storiesBelow + 1 },
                 }))
               }
             >
               + Story (Below)
-            </button>
-
-            <button
-              type="button"
-              style={miniBtnStyle}
-              onClick={() =>
-                setProject((p) => ({
-                  ...p,
-                  m1: { ...p.m1, storiesBelow: Math.max(0, p.m1.storiesBelow - 1) },
-                }))
-              }
-            >
-              – Story (Below)
             </button>
           </div>
 
@@ -304,7 +314,7 @@ export default function Home() {
                   <th style={thRightStyle}>Sq. Ft.</th>
                   <th style={thRightStyle}>%</th>
                   <th style={thStyle}>Mixed Use</th>
-                  <th style={thStyle}>Controls</th>
+                  <th style={thStyle}>Row Controls</th>
                 </tr>
               </thead>
               <tbody>
@@ -408,34 +418,43 @@ export default function Home() {
                               </td>
 
                               <td style={tdStyle}>
-                                {/* Area 1: – Story (disabled if attached rows exist) + + Area */}
-                                {area.areaNo === 1 ? (
-                                  <div style={{ display: "flex", gap: 6, width: 120 }}>
-                                    <div style={{ flex: 1 }}>
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    gap: 6,
+                                    width: 132,
+                                  }}
+                                >
+                                  {area.areaNo === 1 ? (
+                                    <>
+                                      {/* Left: – Story */}
                                       <TableAction
                                         label="– Story"
                                         onClick={() => removeStory(story.id)}
                                         disabled={story.areas.length !== 1}
                                       />
-                                    </div>
 
-                                    <div style={{ flex: 1 }}>
+                                      {/* Right: + Area */}
                                       <TableAction
                                         label="+ Area"
                                         onClick={() => addArea(story.id)}
                                         disabled={story.areas.length >= 4}
                                       />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  /* Area 2–4: – Row (always available on that row) */
-                                  <div style={{ width: 120 }}>
-                                    <TableAction
-                                      label="– Row"
-                                      onClick={() => deleteAreaRow(story.id, area.areaNo as 2 | 3 | 4)}
-                                    />
-                                  </div>
-                                )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {/* Left column blank for Area 2+ */}
+                                      <span />
+
+                                      {/* Right: – Area (deletes only this row) */}
+                                      <TableAction
+                                        label="– Area"
+                                        onClick={() => deleteAreaRow(story.id, area.areaNo as 2 | 3 | 4)}
+                                      />
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
