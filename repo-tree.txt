@@ -1,0 +1,37 @@
+.
+├── README.md
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── public
+│   ├── dropdowns.xlsx
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── repo-tree.txt
+├── src
+│   ├── app
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── ibc-worksheet.code-workspace
+│   │   ├── layout.tsx
+│   │   ├── page.module.css
+│   │   └── page.tsx
+│   ├── components
+│   │   └── checklists
+│   │       ├── Chapter3Checklist.tsx
+│   │       └── ChapterChecklist.tsx
+│   ├── content
+│   │   └── checklists
+│   │       └── ch3.ts
+│   └── lib
+│       ├── dropdownsXlsx.ts
+│       ├── storyGeneration.ts
+│       └── types.ts
+└── tsconfig.json
+
+9 directories, 26 files
