@@ -6,7 +6,7 @@ import type {
   ChecklistChapterResponses,
   ChecklistResponse,
   ChecklistState,
-} from "@/components/checklists/ChapterChecklist";
+} from "@/lib/types";
 
 function nextState(
   current: ChecklistState,

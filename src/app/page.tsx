@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Chapter3Checklist } from "@/components/checklists/Chapter3Checklist";
-import type { ChecklistChapterResponses } from "@/components/checklists/ChapterChecklist";
+import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";

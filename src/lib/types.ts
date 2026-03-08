@@ -6,6 +6,16 @@ export type MixedUseTag = string;
 
 export type StoryKind = "above" | "below";
 
+// Checklist types
+export type ChecklistState = "UNSET" | "RESOLVED" | "INDET" | "NA";
+
+export type ChecklistResponse = {
+  state: ChecklistState;
+  note: string;
+};
+
+export type ChecklistChapterResponses = Record<string, ChecklistResponse>;
+
 export interface AreaRow {
   areaNo: 1 | 2 | 3 | 4;
   occupancy: OccupancyCode | "";
