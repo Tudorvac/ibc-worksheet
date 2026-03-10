@@ -6,10 +6,20 @@ import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
+import {
+  computeNaRowIds,
+  findConflicts,
+  getCodeForId,
+  applyNaUpdates,
+  computeCollapsedFromNa,
+} from "@/lib/applicability";
 
 export default function Home() {
   const [ch3Responses, setCh3Responses] = React.useState<ChecklistChapterResponses>({});
-
+  const [ch3Collapsed, setCh3Collapsed] = React.useState<Set<string>>(new Set());
+  const [pendingNaIds, setPendingNaIds] = React.useState<Set<string> | null>(null);
+  const [conflictCodes, setConflictCodes] = React.useState<string[]>([]);
+  
   const [project, setProject] = React.useState<ProjectState>(() => ({
     m1: {
       storiesAbove: 0,
@@ -176,13 +186,99 @@ export default function Home() {
     }));
   }, [project.m1.storiesAbove, project.m1.storiesBelow]);
 
+  React.useEffect(() => {
+    const newNaIds = computeNaRowIds(project);
+    const conflicts = findConflicts(newNaIds, ch3Responses);
+
+    if (conflicts.length > 0) {
+      setPendingNaIds(newNaIds);
+      setConflictCodes(conflicts.map(getCodeForId));
+    } else {
+      setCh3Responses((prev) => applyNaUpdates(newNaIds, prev));
+      setCh3Collapsed(computeCollapsedFromNa(newNaIds));
+    }
+  }, [project]);
+
+function handleKeepManual() {
+  if (!pendingNaIds) return;
+  const skipIds = new Set(
+    Array.from(pendingNaIds).filter((id) => {
+      const state = ch3Responses[id]?.state ?? "UNSET";
+      return state === "RESOLVED" || state === "INDET";
+    })
+  );
+  setCh3Responses((prev) => applyNaUpdates(pendingNaIds, prev, skipIds));
+  setPendingNaIds(null);
+  setConflictCodes([]);
+}
+
+function handleUpdateSections() {
+  if (!pendingNaIds) return;
+  setCh3Responses((prev) => applyNaUpdates(pendingNaIds, prev));
+  setCh3Collapsed(computeCollapsedFromNa(pendingNaIds));
+  setPendingNaIds(null);
+  setConflictCodes([]);
+}
+
   return (
     <main style={{ padding: "24px", fontFamily: "system-ui, Arial, sans-serif" }}>
+
+          {pendingNaIds && (
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              zIndex: 1000,
+            }}>
+              <div style={{
+                background: "#fff", borderRadius: 14, padding: 24,
+                maxWidth: 480, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              }}>
+                <h3 style={{ margin: "0 0 10px", fontSize: 16, fontWeight: 800 }}>
+                  Building Input Conflict
+                </h3>
+                <p style={{ margin: "0 0 12px", color: "#444", fontSize: 14 }}>
+                  This change would override manual review entries in the following sections:
+                </p>
+                <div style={{
+                  background: "#f6f6f6", borderRadius: 8, padding: "8px 12px",
+                  marginBottom: 16, fontSize: 13, fontWeight: 600, color: "#333",
+                  maxHeight: 160, overflowY: "auto",
+                }}>
+                  {conflictCodes.join(", ")}
+                </div>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={handleKeepManual}
+                    style={{
+                      border: "1px solid #cfcfcf", borderRadius: 10,
+                      padding: "8px 16px", fontSize: 13, fontWeight: 700,
+                      background: "#fafafa", color: "#333", cursor: "pointer",
+                    }}
+                  >
+                    Keep Manual Overrides
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateSections}
+                    style={{
+                      border: "1px solid #3b82f6", borderRadius: 10,
+                      padding: "8px 16px", fontSize: 13, fontWeight: 700,
+                      background: "#3b82f6", color: "#fff", cursor: "pointer",
+                    }}
+                  >
+                    Update Sections
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <header style={{ marginBottom: 16 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>IBC Review Worksheet</h1>
-          <p style={{ margin: "6px 0 0", color: "#444" }}>
-            Prototype (Modules 1–2). Layout-first, behavior next.
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#989898" }}>2024 IBC Review Worksheet</h1>
+          <p style={{ margin: "6px 0 0", color: "#989898" }}>
+            This review worksheet assists in evaluating buildings for compliance with the 2024 International Building Code. It functions primarily as a dynamic checklist system driven by project inputs, while also serving as a formal record of the plan review.
           </p>
         </header>
 
@@ -328,7 +424,8 @@ export default function Home() {
                 <div style={cardHeaderStyle}>
                   <div>
                     <div style={moduleTagStyle}>MOD 2</div>
-                    <h2 style={cardTitleStyle}>Building Heights & Areas</h2>
+                    <h2 style={cardTitleStyle}>General Building Heights & Areas</h2>
+                    <div>This module establishes building heights, areas, occupancies, and uses including mezzanines, accessory and mixed occupancies.</div>
                   </div>
                 </div>
 
@@ -522,14 +619,19 @@ export default function Home() {
                 <div style={cardHeaderStyle}>
                   <div>
                     <div style={moduleTagStyle}>CH 3</div>
-                    <h2 style={cardTitleStyle}>Chapter 3 – Checklist</h2>
+                    <h2 style={cardTitleStyle}>Chapter 3: Occupancy Classification and Use</h2>
                     <p style={{ margin: "6px 0 0", color: "#444" }}>
-                      Checklist section (content will be authored incrementally).
+                      This chapter controls the classification of all buildings and structures as to occupancy and use. 
                     </p>
                   </div>
                 </div>
 
-                <Chapter3Checklist responses={ch3Responses} setResponses={setCh3Responses} />
+                <Chapter3Checklist
+                  responses={ch3Responses}
+                  setResponses={setCh3Responses}
+                  externalCollapsed={ch3Collapsed}
+                  setExternalCollapsed={setCh3Collapsed}
+                />
               </section>
             </div>
           </div>

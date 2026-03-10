@@ -11,7 +11,9 @@ export type ChecklistState = "UNSET" | "RESOLVED" | "INDET" | "NA";
 
 export type ChecklistResponse = {
   state: ChecklistState;
-  note: string;
+  autoNote: string;       // system-generated, shown grey italic
+  userNote: string;       // manually entered, shown black
+  noteEdited: boolean;    // true once reviewer has touched the note field
 };
 
 export type ChecklistChapterResponses = Record<string, ChecklistResponse>;

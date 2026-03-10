@@ -5,8 +5,6 @@ export type ChecklistRowDef = {
 };
 
 export const ch3Rows: ChecklistRowDef[] = [
-  { id: "ch3-title", code: "", title: "Chapter 3 Occupancy Classification and Use" },
-
   { id: "301", code: "301", title: "Scope" },
   { id: "301.1", code: "301.1", title: "General." },
 

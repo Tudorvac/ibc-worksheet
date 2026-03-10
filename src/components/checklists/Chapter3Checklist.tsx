@@ -45,10 +45,39 @@ const UNK_TEXT = "#6b7280";
 export function Chapter3Checklist(props: {
   responses: ChecklistChapterResponses;
   setResponses: (next: ChecklistChapterResponses) => void;
+  externalCollapsed?: Set<string>;
+  setExternalCollapsed?: (s: Set<string>) => void;
 }) {
-  const { responses, setResponses } = props;
+  const { responses, setResponses, externalCollapsed, setExternalCollapsed } = props;
 
-  const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
+  const [collapsedInternal, setCollapsedInternal] = React.useState<Set<string>>(() => new Set());
+
+  // Merge external collapsed (from applicability engine) with internal collapsed (from user clicks)
+  const collapsed = React.useMemo(() => {
+    const merged = new Set(collapsedInternal);
+    if (externalCollapsed) {
+      for (const c of externalCollapsed) merged.add(c);
+    }
+    return merged;
+  }, [collapsedInternal, externalCollapsed]);
+
+function setCollapsed(updater: (prev: Set<string>) => Set<string>) {
+  setCollapsedInternal(updater);
+}
+
+// Sync internal collapsed removals back to external after render
+React.useEffect(() => {
+  if (!setExternalCollapsed || !externalCollapsed) return;
+  const nextExternal = new Set(externalCollapsed);
+  let changed = false;
+  for (const c of externalCollapsed) {
+    if (!collapsedInternal.has(c)) {
+      nextExternal.delete(c);
+      changed = true;
+    }
+  }
+  if (changed) setExternalCollapsed(nextExternal);
+}, [collapsedInternal]);
 
   function toggleCollapsed(code: string) {
     setCollapsed((prev) => {
@@ -65,15 +94,15 @@ export function Chapter3Checklist(props: {
       if (!r.code) continue;
       if (dotLevel(r.code) === 0) next.add(r.code); // collapse main sections only
     }
-    setCollapsed(next);
+    setCollapsed(() => next);
   }
 
   function expandAll() {
-    setCollapsed(new Set());
+    setCollapsed(() => new Set());
   }
 
   function setItemResponse(itemId: string, patch: Partial<ChecklistResponse>) {
-    const prev = responses[itemId] ?? { state: "UNSET" as ChecklistState, note: "" };
+    const prev = responses[itemId] ?? { state: "UNSET" as ChecklistState, autoNote: "", userNote: "", noteEdited: false };
     const next = { ...prev, ...patch };
     setResponses({ ...responses, [itemId]: next });
   }
@@ -81,7 +110,7 @@ export function Chapter3Checklist(props: {
   function setMany(patches: Record<string, Partial<ChecklistResponse>>) {
     const nextResponses: ChecklistChapterResponses = { ...responses };
     for (const [id, patch] of Object.entries(patches)) {
-      const prev = nextResponses[id] ?? { state: "UNSET" as ChecklistState, note: "" };
+      const prev = nextResponses[id] ?? { state: "UNSET" as ChecklistState, autoNote: "", userNote: "", noteEdited: false };
       nextResponses[id] = { ...prev, ...patch };
     }
     setResponses(nextResponses);
@@ -99,30 +128,7 @@ export function Chapter3Checklist(props: {
       .map((r) => r.id);
   }
 
-  // MAIN-SECTION AGGREGATION (301, 302, 303...)
-  // Priority: any INDET → INDET; else any RESOLVED → RESOLVED; else all NA → NA; else UNSET
-  function aggregateStateForMainSection(parentCode: string): ChecklistState {
-    const ids = descendantIdsOf(parentCode);
-    if (ids.length === 0) return "UNSET";
-
-    let anyIndet = false;
-    let anyResolved = false;
-    let allNA = true;
-
-    for (const id of ids) {
-      const st = responses[id]?.state ?? "UNSET";
-      if (st === "INDET") anyIndet = true;
-      if (st === "RESOLVED") anyResolved = true;
-      if (st !== "NA") allNA = false;
-    }
-
-    if (anyIndet) return "INDET";
-    if (anyResolved) return "RESOLVED";
-    if (allNA) return "NA";
-    return "UNSET";
-  }
-
-  function summarizeDescendants(parentCode: string) {
+    function summarizeDescendants(parentCode: string) {
     const ids = descendantIdsOf(parentCode);
 
     let resolved = 0;
@@ -249,6 +255,40 @@ export function Chapter3Checklist(props: {
   function handleIndetClick(rowId: string) {
     const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
     setItemResponse(rowId, { state: nextState(r.state, "INDET") });
+    }
+
+  function handleMainSectionClick(
+    rowId: string,
+    rowCode: string,
+    clicked: Exclude<ChecklistState, "UNSET">
+  ) {
+    const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
+    const next = nextState(r.state, clicked);
+
+    if (clicked !== "NA") {
+      // R and I only affect the main section row itself
+      setItemResponse(rowId, { state: next });
+      return;
+    }
+
+    // N/A cascades to all descendants
+    const descIds = descendantIdsOf(rowCode);
+    const patch: Record<string, Partial<ChecklistResponse>> = {
+      [rowId]: { state: next },
+    };
+    for (const id of descIds) patch[id] = { state: next };
+
+    setMany(patch);
+
+    setCollapsed((prev) => {
+      const nextSet = new Set(prev);
+      if (next === "NA") nextSet.add(rowCode);
+      else {
+        nextSet.delete(rowCode);
+        for (const c of codesOfDescendants(rowCode)) nextSet.delete(c);
+      }
+      return nextSet;
+    });
   }
 
   return (
@@ -275,14 +315,14 @@ export function Chapter3Checklist(props: {
           style={{
             display: "grid",
             gridTemplateColumns: "140px 1fr 280px 60px",
-            gap: 10,
+            gap: 35,
             alignItems: "center",
             padding: "6px 10px",
             borderBottom: "1px solid #d0d0d0",
             background: "#fafafa",
             fontSize: 12,
             fontWeight: 800,
-            color: "#333",
+            color: "#444",
           }}
         >
           <div>Resolved / Indet. / N/A</div>
@@ -300,7 +340,7 @@ export function Chapter3Checklist(props: {
                   style={{
                     padding: "8px 10px",
                     fontWeight: 900,
-                    color: "#111",
+                    color: "#444",
                     background: "#fff",
                     borderBottom: "1px solid #e9e9e9",
                   }}
@@ -320,9 +360,7 @@ export function Chapter3Checklist(props: {
             const isMainSection = level === 0;
 
             // MAIN sections show derived indicator state (from descendants)
-            const mainAggState = isMainSection ? aggregateStateForMainSection(row.code) : "UNSET";
-            const effectiveState: ChecklistState = isMainSection ? mainAggState : r.state;
-
+            const effectiveState: ChecklistState = r.state;
             const rowIsNA = effectiveState === "NA";
 
             // summary only when collapsed AND only for main sections (301, 302, 303...)
@@ -353,14 +391,34 @@ export function Chapter3Checklist(props: {
               >
                 {/* LEFT CONTROL CELL */}
                 <div style={{ display: "flex", gap: 6 }}>
-                  {isMainSection ? (
-                    // Indicators (not clickable) derived from descendants
-                    <>
-                      <span style={indicatorStyle("RESOLVED", effectiveState === "RESOLVED")}>✓</span>
-                      <span style={indicatorStyle("INDET", effectiveState === "INDET")}>?</span>
-                      <span style={indicatorStyle("NA", effectiveState === "NA")}>N/A</span>
-                    </>
-                  ) : (
+                {isMainSection ? (
+                  <>
+                    <button
+                      type="button"
+                      title="Resolved"
+                      onClick={() => handleMainSectionClick(row.id, row.code, "RESOLVED")}
+                      style={stateBtnStyle("RESOLVED", r.state === "RESOLVED")}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      title="Indeterminate"
+                      onClick={() => handleMainSectionClick(row.id, row.code, "INDET")}
+                      style={stateBtnStyle("INDET", r.state === "INDET")}
+                    >
+                      ?
+                    </button>
+                    <button
+                      type="button"
+                      title="Not Applicable"
+                      onClick={() => handleMainSectionClick(row.id, row.code, "NA")}
+                      style={stateBtnStyle("NA", r.state === "NA")}
+                    >
+                      N/A
+                    </button>
+                  </>
+                ) : (
                     // Subsections are interactive
                     <>
                       <button
@@ -477,11 +535,15 @@ export function Chapter3Checklist(props: {
                 </div>
 
                 {/* Notes remain editable; dim only when effective state is NA */}
-                <NotesField
-                  value={r.note}
-                  onChange={(v) => setItemResponse(row.id, { note: v })}
-                  dim={rowIsNA}
-                />
+                  <NotesField
+                    autoNote={r.autoNote ?? ""}
+                    userNote={r.userNote ?? ""}
+                    noteEdited={r.noteEdited ?? false}
+                    onChange={(newUserNote, newNoteEdited) =>
+                      setItemResponse(row.id, { userNote: newUserNote, noteEdited: newNoteEdited })
+                    }
+                    dim={rowIsNA}
+                  />
 
                 <div
                   style={{
@@ -531,40 +593,59 @@ function CollapsedSummaryText(props: {
   );
 }
 
-function NotesField(props: { value: string; onChange: (v: string) => void; dim?: boolean }) {
-  const { value, onChange, dim } = props;
-  const [focused, setFocused] = React.useState(false);
+function NotesField(props: {
+  autoNote: string;
+  userNote: string;
+  noteEdited: boolean;
+  onChange: (userNote: string, noteEdited: boolean) => void;
+  dim?: boolean;
+}) {
+  
+const { autoNote, userNote, noteEdited, onChange, dim } = props;
+const [focused, setFocused] = React.useState(false);
 
-  const baseStyle: React.CSSProperties = {
-    width: "100%",
-    border: "1px solid #cfcfcf",
-    borderRadius: 10,
-    fontSize: 12,
-    background: dim ? "#f3f4f6" : "#fff",
-    color: dim ? "#6b7280" : "#111",
-  };
+const displayValue = noteEdited ? userNote : autoNote;
+const isAuto = !noteEdited && !!autoNote;
 
-  if (!focused) {
-    return (
-      <input
-        value={value}
-        placeholder="Notes…"
-        onFocus={() => setFocused(true)}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          ...baseStyle,
-          padding: "4px 8px",
-        }}
-      />
-    );
+function handleChange(val: string) {
+  if (val === "") {
+    onChange("", false);
+  } else {
+    onChange(val, true);
   }
+}
+
+const baseStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid #cfcfcf",
+  borderRadius: 10,
+  fontSize: 12,
+  background: dim ? "#f3f4f6" : "#fff",
+  color: isAuto ? "#9ca3af" : "#111",
+  fontStyle: isAuto ? "italic" : "normal",
+};
+
+if (!focused) {
+  return (
+    <input
+      value={displayValue}
+      placeholder={autoNote ? "" : "Notes…"}
+      onFocus={() => setFocused(true)}
+      onChange={(e) => handleChange(e.target.value)}
+      style={{
+        ...baseStyle,
+        padding: "4px 8px",
+      }}
+    />
+  );
+}
 
   return (
     <textarea
-      value={value}
-      placeholder="Notes…"
+      value={displayValue}
+      placeholder={autoNote ? "" : "Notes…"}
       onBlur={() => setFocused(false)}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => handleChange(e.target.value)}
       rows={3}
       style={{
         ...baseStyle,
@@ -593,32 +674,6 @@ function stateBtnStyle(
     cursor: "pointer",
     userSelect: "none",
     minWidth: 34,
-  };
-}
-
-// Non-clickable “summary indicators” for main section rows
-function indicatorStyle(
-  kind: "RESOLVED" | "INDET" | "NA",
-  active: boolean
-): React.CSSProperties {
-  const c = active ? BTN[kind] : BTN.OFF;
-
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: `1px solid ${c.border}`,
-    borderRadius: 10,
-    padding: "3px 6px",
-    fontSize: 11,
-    fontWeight: 800,
-    lineHeight: 1.1,
-    background: c.bg,
-    color: c.text,
-    userSelect: "none",
-    minWidth: 34,
-    cursor: "default",
-    opacity: active ? 1 : 0.85,
   };
 }
 
