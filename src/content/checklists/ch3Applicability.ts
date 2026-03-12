@@ -2,10 +2,7 @@
 // A section is applicable if the building has AT LEAST ONE matching occupancy tag.
 // Empty array = always applicable regardless of occupancy.
 
-export type ApplicabilityRule = {
-  id: string;
-  occupancies: string[]; // empty = always applicable
-};
+import type { ApplicabilityRule } from "@/lib/types"
 
 export const ch3ApplicabilityRules: ApplicabilityRule[] = [
   // Always applicable

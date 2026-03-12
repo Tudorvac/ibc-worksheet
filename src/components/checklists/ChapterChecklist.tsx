@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ch3Rows } from "@/content/checklists/ch3";
 import type {
+  ChecklistRowDef,
+  ApplicabilityRule,
   ChecklistChapterResponses,
   ChecklistResponse,
   ChecklistState,
@@ -33,26 +34,29 @@ type ButtonPalette = {
 const BTN: Record<"RESOLVED" | "INDET" | "NA" | "OFF", ButtonPalette> = {
   RESOLVED: { bg: "#e6f4ea", border: "#34a853", text: "#1e7a35" },
   INDET: { bg: "#fde7e7", border: "#d93025", text: "#b3261e" },
-
-  // N/A selected fill darkened ~25% vs prior (#e9ecef -> #d7dbe0-ish)
   NA: { bg: "#d7dbe0", border: "#8a8f98", text: "#4b5563" },
-
   OFF: { bg: "#fafafa", border: "#cfcfcf", text: "#222" },
 };
 
 const UNK_TEXT = "#6b7280";
 
-export function Chapter3Checklist(props: {
+export type ChapterChecklistProps = {
+  // Data
+  rows: ChecklistRowDef[];
+  applicabilityRules?: ApplicabilityRule[];
+  // State
   responses: ChecklistChapterResponses;
   setResponses: (next: ChecklistChapterResponses) => void;
+  // Collapse sync (for applicability engine)
   externalCollapsed?: Set<string>;
   setExternalCollapsed?: (s: Set<string>) => void;
-}) {
-  const { responses, setResponses, externalCollapsed, setExternalCollapsed } = props;
+};
+
+export function ChapterChecklist(props: ChapterChecklistProps) {
+  const { rows, responses, setResponses, externalCollapsed, setExternalCollapsed } = props;
 
   const [collapsedInternal, setCollapsedInternal] = React.useState<Set<string>>(() => new Set());
 
-  // Merge external collapsed (from applicability engine) with internal collapsed (from user clicks)
   const collapsed = React.useMemo(() => {
     const merged = new Set(collapsedInternal);
     if (externalCollapsed) {
@@ -61,23 +65,22 @@ export function Chapter3Checklist(props: {
     return merged;
   }, [collapsedInternal, externalCollapsed]);
 
-function setCollapsed(updater: (prev: Set<string>) => Set<string>) {
-  setCollapsedInternal(updater);
-}
-
-// Sync internal collapsed removals back to external after render
-React.useEffect(() => {
-  if (!setExternalCollapsed || !externalCollapsed) return;
-  const nextExternal = new Set(externalCollapsed);
-  let changed = false;
-  for (const c of externalCollapsed) {
-    if (!collapsedInternal.has(c)) {
-      nextExternal.delete(c);
-      changed = true;
-    }
+  function setCollapsed(updater: (prev: Set<string>) => Set<string>) {
+    setCollapsedInternal(updater);
   }
-  if (changed) setExternalCollapsed(nextExternal);
-}, [collapsedInternal]);
+
+  React.useEffect(() => {
+    if (!setExternalCollapsed || !externalCollapsed) return;
+    const nextExternal = new Set(externalCollapsed);
+    let changed = false;
+    for (const c of externalCollapsed) {
+      if (!collapsedInternal.has(c)) {
+        nextExternal.delete(c);
+        changed = true;
+      }
+    }
+    if (changed) setExternalCollapsed(nextExternal);
+  }, [collapsedInternal]);
 
   function toggleCollapsed(code: string) {
     setCollapsed((prev) => {
@@ -90,9 +93,9 @@ React.useEffect(() => {
 
   function collapseAll() {
     const next = new Set<string>();
-    for (const r of ch3Rows) {
+    for (const r of rows) {
       if (!r.code) continue;
-      if (dotLevel(r.code) === 0) next.add(r.code); // collapse main sections only
+      if (dotLevel(r.code) === 0) next.add(r.code);
     }
     setCollapsed(() => next);
   }
@@ -117,48 +120,48 @@ React.useEffect(() => {
   }
 
   function codesOfDescendants(parentCode: string): string[] {
-    return ch3Rows
+    return rows
       .filter((r) => r.code && isDescendant(r.code, parentCode))
       .map((r) => r.code as string);
   }
 
   function descendantIdsOf(parentCode: string): string[] {
-    return ch3Rows
+    return rows
       .filter((r) => r.code && isDescendant(r.code, parentCode))
       .map((r) => r.id);
   }
 
-    function summarizeDescendants(parentCode: string) {
+  function summarizeDescendants(parentCode: string) {
     const ids = descendantIdsOf(parentCode);
-
-    let resolved = 0;
-    let indet = 0;
-    let na = 0;
-    let unk = 0;
-
+    let resolved = 0, indet = 0, na = 0, unk = 0;
     for (const id of ids) {
       const state = responses[id]?.state ?? "UNSET";
-      if (state === "RESOLVED") resolved += 1;
-      else if (state === "INDET") indet += 1;
-      else if (state === "NA") na += 1;
-      else unk += 1;
+      if (state === "RESOLVED") resolved++;
+      else if (state === "INDET") indet++;
+      else if (state === "NA") na++;
+      else unk++;
     }
-
     return { resolved, indet, na, unk, total: ids.length };
   }
 
+function ancestorCodesOf(code: string): string[] {
+  const parts = code.split(".");
+  const ancestors: string[] = [];
+  for (let i = 1; i < parts.length; i++) {
+    ancestors.push(parts.slice(0, i).join("."));
+  }
+  return ancestors;
+}
+
   const hasChildrenByCode = React.useMemo(() => {
     const map: Record<string, boolean> = {};
-    for (let i = 0; i < ch3Rows.length; i++) {
-      const row = ch3Rows[i];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
       if (!row.code) continue;
-
-      for (let j = i + 1; j < ch3Rows.length; j++) {
-        const next = ch3Rows[j];
+      for (let j = i + 1; j < rows.length; j++) {
+        const next = rows[j];
         if (!next.code) continue;
-
         if (!isDescendant(next.code, row.code) && dotLevel(next.code) <= dotLevel(row.code)) break;
-
         if (isDescendant(next.code, row.code)) {
           map[row.code] = true;
           break;
@@ -167,17 +170,15 @@ React.useEffect(() => {
       if (map[row.code] === undefined) map[row.code] = false;
     }
     return map;
-  }, []);
+  }, [rows]);
 
   const visibleRows = React.useMemo(() => {
-    const out: typeof ch3Rows = [];
-
-    for (const row of ch3Rows) {
+    const out: typeof rows = [];
+    for (const row of rows) {
       if (!row.code) {
         out.push(row);
         continue;
       }
-
       const parts = row.code.split(".");
       let hidden = false;
       for (let k = 1; k < parts.length; k++) {
@@ -189,63 +190,76 @@ React.useEffect(() => {
       }
       if (!hidden) out.push(row);
     }
-
     return out;
-  }, [collapsed]);
+  }, [collapsed, rows]);
 
   const itemNumberById = React.useMemo(() => {
     const map: Record<string, number> = {};
     let n = 0;
-    for (const row of ch3Rows) {
+    for (const row of rows) {
       if (!row.code) continue;
       if ((responses[row.id]?.state ?? "UNSET") === "INDET") {
-        n += 1;
+        n++;
         map[row.id] = n;
       }
     }
     return map;
-  }, [responses]);
+  }, [responses, rows]);
 
   function handleNaClick(rowId: string, rowCode: string, hasKids: boolean) {
-    const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
-    const next = nextState(r.state, "NA");
+  const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, autoNote: "", userNote: "", noteEdited: false };
+  const next = nextState(r.state, "NA");
+  const patch: Record<string, Partial<ChecklistResponse>> = {
+    [rowId]: { 
+      state: next,
+      autoNote: next === "NA" ? "Not Applicable." : "",
+    },
+  };
 
-    const patch: Record<string, Partial<ChecklistResponse>> = {
-      [rowId]: { state: next },
-    };
+  let collapseOps: { mode: "add" | "remove"; codes: string[] } | null = null;
 
-    let collapseOps: { mode: "add" | "remove"; codes: string[] } | null = null;
+  if (hasKids) {
+    const descIds = rows
+      .filter((rr) => rr.code && isDescendant(rr.code, rowCode))
+      .map((rr) => rr.id);
 
-    if (hasKids) {
-      const descIds = ch3Rows
-        .filter((rr) => rr.code && isDescendant(rr.code, rowCode))
-        .map((rr) => rr.id);
-
-      if (next === "NA") {
-        for (const id of descIds) patch[id] = { state: "NA" };
-        collapseOps = { mode: "add", codes: [rowCode] };
-      } else {
-        for (const id of descIds) {
-          const cur = responses[id]?.state ?? "UNSET";
-          if (cur === "NA") patch[id] = { state: "UNSET" };
-        }
-        collapseOps = { mode: "remove", codes: [rowCode, ...codesOfDescendants(rowCode)] };
+    if (next === "NA") {
+      for (const id of descIds) patch[id] = { state: "NA", autoNote: "Not Applicable." };
+      collapseOps = { mode: "add", codes: [rowCode] };
+    } else {
+      for (const id of descIds) {
+        const cur = responses[id]?.state ?? "UNSET";
+        if (cur === "NA") patch[id] = { state: "UNSET", autoNote: "" };
       }
-    }
-
-    setMany(patch);
-
-    if (collapseOps) {
-      setCollapsed((prev) => {
-        const nextSet = new Set(prev);
-        for (const c of collapseOps.codes) {
-          if (collapseOps.mode === "add") nextSet.add(c);
-          else nextSet.delete(c);
-        }
-        return nextSet;
-      });
+      collapseOps = { mode: "remove", codes: [rowCode, ...codesOfDescendants(rowCode)] };
     }
   }
+
+  // If un-N/A-ing, clear any N/A ancestors
+  if (next !== "NA") {
+    for (const ancestorCode of ancestorCodesOf(rowCode)) {
+      const ancestorRow = rows.find((r) => r.code === ancestorCode);
+      if (!ancestorRow) continue;
+      const ancestorState = responses[ancestorRow.id]?.state ?? "UNSET";
+      if (ancestorState === "NA") {
+        patch[ancestorRow.id] = { state: "UNSET", autoNote: "" };
+      }
+    }
+  }
+
+  setMany(patch);
+
+  if (collapseOps) {
+    setCollapsed((prev) => {
+      const nextSet = new Set(prev);
+      for (const c of collapseOps!.codes) {
+        if (collapseOps!.mode === "add") nextSet.add(c);
+        else nextSet.delete(c);
+      }
+      return nextSet;
+    });
+  }
+}
 
   function handleResolvedClick(rowId: string) {
     const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
@@ -255,45 +269,45 @@ React.useEffect(() => {
   function handleIndetClick(rowId: string) {
     const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
     setItemResponse(rowId, { state: nextState(r.state, "INDET") });
-    }
+  }
 
   function handleMainSectionClick(
-    rowId: string,
-    rowCode: string,
-    clicked: Exclude<ChecklistState, "UNSET">
-  ) {
-    const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
-    const next = nextState(r.state, clicked);
+  rowId: string,
+  rowCode: string,
+  clicked: Exclude<ChecklistState, "UNSET">
+) {
+  const r = responses[rowId] ?? { state: "UNSET" as ChecklistState, note: "" };
+  const next = nextState(r.state, clicked);
 
-    if (clicked !== "NA") {
-      // R and I only affect the main section row itself
-      setItemResponse(rowId, { state: next });
-      return;
-    }
-
-    // N/A cascades to all descendants
-    const descIds = descendantIdsOf(rowCode);
-    const patch: Record<string, Partial<ChecklistResponse>> = {
-      [rowId]: { state: next },
-    };
-    for (const id of descIds) patch[id] = { state: next };
-
-    setMany(patch);
-
-    setCollapsed((prev) => {
-      const nextSet = new Set(prev);
-      if (next === "NA") nextSet.add(rowCode);
-      else {
-        nextSet.delete(rowCode);
-        for (const c of codesOfDescendants(rowCode)) nextSet.delete(c);
-      }
-      return nextSet;
-    });
+  if (clicked !== "NA") {
+    setItemResponse(rowId, { state: next });
+    return;
   }
+
+  // N/A cascades to all descendants with autoNote
+  const descIds = descendantIdsOf(rowCode);
+  const patch: Record<string, Partial<ChecklistResponse>> = {
+    [rowId]: { state: next, autoNote: next === "NA" ? "Not Applicable." : "" },
+  };
+  for (const id of descIds) {
+    patch[id] = { state: next, autoNote: next === "NA" ? "Not Applicable." : "" };
+  }
+
+  setMany(patch);
+
+  setCollapsed((prev) => {
+    const nextSet = new Set(prev);
+    if (next === "NA") nextSet.add(rowCode);
+    else {
+      nextSet.delete(rowCode);
+      for (const c of codesOfDescendants(rowCode)) nextSet.delete(c);
+    }
+    return nextSet;
+  });
+}
 
   return (
     <div style={{ width: "100%" }}>
-      {/* Controls only (title lives in parent layout) */}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 8 }}>
         <button type="button" onClick={collapseAll} style={topActionBtnStyle}>
           Collapse all
@@ -320,13 +334,13 @@ React.useEffect(() => {
             padding: "4px 8px",
             borderBottom: "1px solid #d0d0d0",
             background: "#fafafa",
-            fontSize: 12,
+            fontSize: 10,
             fontWeight: 800,
             color: "#333",
           }}
         >
           <div>Resolv. / Indet. / N/A</div>
-          <div>Section / Title</div>
+          <div>Code Section</div>
           <div>Notes</div>
           <div style={{ textAlign: "right" }}>Item</div>
         </div>
@@ -350,30 +364,22 @@ React.useEffect(() => {
               );
             }
 
-            const r = responses[row.id] ?? { state: "UNSET" as ChecklistState, note: "" };
+            const r = responses[row.id] ?? { state: "UNSET" as ChecklistState, autoNote: "", userNote: "", noteEdited: false };
             const level = dotLevel(row.code);
             const indentPx = Math.min(level, 4) * 14;
-
             const hasKids = !!hasChildrenByCode[row.code];
             const isCollapsedHere = collapsed.has(row.code);
-
             const isMainSection = level === 0;
-
-            // MAIN sections show derived indicator state (from descendants)
             const effectiveState: ChecklistState = r.state;
             const rowIsNA = effectiveState === "NA";
 
-            // summary only when collapsed AND only for main sections (301, 302, 303...)
             const summary =
               isMainSection && isCollapsedHere && hasKids ? summarizeDescendants(row.code) : null;
 
-            // Only dim section number + title (about 50% contrast)
             const mainTextColor = rowIsNA ? "rgba(17, 17, 17, 0.5)" : "#111";
             const codeTextColor = rowIsNA ? "rgba(51, 51, 51, 0.5)" : "#333";
             const chevronColor = hasKids
-              ? rowIsNA
-                ? "rgba(68, 68, 68, 0.5)"
-                : "#444"
+              ? rowIsNA ? "rgba(68, 68, 68, 0.5)" : "#444"
               : "transparent";
 
             return (
@@ -381,45 +387,44 @@ React.useEffect(() => {
                 key={row.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "140px 1fr 280px 60px",
+                  gridTemplateColumns: "120px 1fr 280px 60px",
                   gap: 6,
                   alignItems: "center",
-                  padding: "4px 10px",
-                  borderBottom: "1px solid #e9e9e9",
-                  background: "#fff", // no row shading for NA
+                  padding: isMainSection ? "2px 10px" : "2px 10px",
+                  borderBottom: `1px solid ${isMainSection ? "#d0d0d0" : "#e9e9e9"}`,
+                  background: rowIsNA ? "#f9fafb" : isMainSection ? "#f0f4ff" : "#fff",
                 }}
               >
                 {/* LEFT CONTROL CELL */}
-                <div style={{ display: "flex", gap: 6 }}>
-                {isMainSection ? (
-                  <>
-                    <button
-                      type="button"
-                      title="Resolved"
-                      onClick={() => handleMainSectionClick(row.id, row.code, "RESOLVED")}
-                      style={stateBtnStyle("RESOLVED", r.state === "RESOLVED")}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      type="button"
-                      title="Indeterminate"
-                      onClick={() => handleMainSectionClick(row.id, row.code, "INDET")}
-                      style={stateBtnStyle("INDET", r.state === "INDET")}
-                    >
-                      ?
-                    </button>
-                    <button
-                      type="button"
-                      title="Not Applicable"
-                      onClick={() => handleMainSectionClick(row.id, row.code, "NA")}
-                      style={stateBtnStyle("NA", r.state === "NA")}
-                    >
-                      N/A
-                    </button>
-                  </>
-                ) : (
-                    // Subsections are interactive
+                <div style={{ display: "flex", gap: 4 }}>
+                  {isMainSection ? (
+                    <>
+                      <button
+                        type="button"
+                        title="Resolved"
+                        onClick={() => handleMainSectionClick(row.id, row.code, "RESOLVED")}
+                        style={stateBtnStyle("RESOLVED", r.state === "RESOLVED")}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        title="Indeterminate"
+                        onClick={() => handleMainSectionClick(row.id, row.code, "INDET")}
+                        style={stateBtnStyle("INDET", r.state === "INDET")}
+                      >
+                        ?
+                      </button>
+                      <button
+                        type="button"
+                        title="Not Applicable"
+                        onClick={() => handleMainSectionClick(row.id, row.code, "NA")}
+                        style={stateBtnStyle("NA", r.state === "NA")}
+                      >
+                        N/A
+                      </button>
+                    </>
+                  ) : (
                     <>
                       <button
                         type="button"
@@ -429,7 +434,6 @@ React.useEffect(() => {
                       >
                         ✓
                       </button>
-
                       <button
                         type="button"
                         title="Indeterminate"
@@ -438,7 +442,6 @@ React.useEffect(() => {
                       >
                         ?
                       </button>
-
                       <button
                         type="button"
                         title="Not Applicable"
@@ -451,7 +454,7 @@ React.useEffect(() => {
                   )}
                 </div>
 
-                {/* Outline cell + right-justified summary */}
+                {/* Section / Title cell */}
                 <div
                   style={{
                     display: "flex",
@@ -462,7 +465,6 @@ React.useEffect(() => {
                     minWidth: 0,
                   }}
                 >
-                  {/* Left: chevron + number + title */}
                   <div style={{ display: "flex", alignItems: "baseline", minWidth: 0 }}>
                     <button
                       type="button"
@@ -470,11 +472,11 @@ React.useEffect(() => {
                       disabled={!hasKids}
                       onClick={() => hasKids && toggleCollapsed(row.code)}
                       style={{
-                        width: 14,
+                        width: 16,
                         height: 14,
                         border: "none",
                         background: "transparent",
-                        padding: 0,
+                        padding: 8,
                         cursor: hasKids ? "pointer" : "default",
                         color: chevronColor,
                         display: "inline-flex",
@@ -492,26 +494,27 @@ React.useEffect(() => {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "60px 1fr",
-                        columnGap: 10,
+                        gridTemplateColumns: isMainSection ? "30px 1fr" : "55px 1fr",
+                        columnGap: isMainSection ? 6 : 10,
                         alignItems: "baseline",
                         minWidth: 0,
                       }}
                     >
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          color: codeTextColor,
+                      <div 
+                        style={{ 
+                          fontWeight: level === 0 ? 700 : 500,
+                          color: rowIsNA ? "rgba(51,51,51,0.5)" : isMainSection ? "#1e3a8a" : "#333",
                           whiteSpace: "nowrap",
+                          fontSize: isMainSection ? 13 : 13,
                         }}
                       >
                         {row.code}
                       </div>
-
                       <div
                         style={{
-                          color: mainTextColor,
-                          fontWeight: level === 0 ? 700 : 400,
+                          color: rowIsNA ? "rgba(17,17,17,0.5)" : isMainSection ? "#1e3a8a" : "#111",
+                          fontWeight: level === 0 ? 700 : 500,
+                          fontSize: isMainSection ? 13 : 13,
                           lineHeight: 1.15,
                           minWidth: 0,
                           overflowWrap: "anywhere",
@@ -522,7 +525,6 @@ React.useEffect(() => {
                     </div>
                   </div>
 
-                  {/* Right: collapsed summary text */}
                   {summary && (
                     <CollapsedSummaryText
                       resolved={summary.resolved}
@@ -534,17 +536,18 @@ React.useEffect(() => {
                   )}
                 </div>
 
-                {/* Notes remain editable; dim only when effective state is NA */}
-                  <NotesField
-                    autoNote={r.autoNote ?? ""}
-                    userNote={r.userNote ?? ""}
-                    noteEdited={r.noteEdited ?? false}
-                    onChange={(newUserNote, newNoteEdited) =>
-                      setItemResponse(row.id, { userNote: newUserNote, noteEdited: newNoteEdited })
-                    }
-                    dim={rowIsNA}
-                  />
+                {/* Notes */}
+                <NotesField
+                  autoNote={r.autoNote ?? ""}
+                  userNote={r.userNote ?? ""}
+                  noteEdited={r.noteEdited ?? false}
+                  onChange={(newUserNote, newNoteEdited) =>
+                    setItemResponse(row.id, { userNote: newUserNote, noteEdited: newNoteEdited })
+                  }
+                  dim={rowIsNA}
+                />
 
+                {/* Item number */}
                 <div
                   style={{
                     textAlign: "right",
@@ -571,7 +574,6 @@ function CollapsedSummaryText(props: {
   dim?: boolean;
 }) {
   const { resolved, indet, na, unk, dim } = props;
-
   return (
     <div
       style={{
@@ -580,7 +582,7 @@ function CollapsedSummaryText(props: {
         alignItems: "baseline",
         whiteSpace: "nowrap",
         fontSize: 11,
-        fontWeight: 600, // helper text
+        fontWeight: 600,
         opacity: dim ? 0.75 : 1,
       }}
       title="Counts of hidden (collapsed) descendant rows"
@@ -600,47 +602,43 @@ function NotesField(props: {
   onChange: (userNote: string, noteEdited: boolean) => void;
   dim?: boolean;
 }) {
-  
-const { autoNote, userNote, noteEdited, onChange, dim } = props;
-const [focused, setFocused] = React.useState(false);
+  const { autoNote, userNote, noteEdited, onChange, dim } = props;
+  const [focused, setFocused] = React.useState(false);
 
-const displayValue = noteEdited ? userNote : autoNote;
-const isAuto = !noteEdited && !!autoNote;
+  const displayValue = noteEdited ? userNote : autoNote;
+  const isAuto = !noteEdited && !!autoNote;
 
-function handleChange(val: string) {
-  if (val === "") {
-    onChange("", false);
-  } else {
-    onChange(val, true);
+  function handleChange(val: string) {
+    if (val === "") {
+      onChange("", false);
+    } else {
+      onChange(val, true);
+    }
   }
-}
 
-const baseStyle: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid #cfcfcf",
-  borderRadius: 10,
-  fontSize: 12,
-  background: dim ? "#f3f4f6" : "#fff",
-  color: isAuto ? "#9ca3af" : "#111",
-  fontStyle: isAuto ? "italic" : "normal",
-};
+  const baseStyle: React.CSSProperties = {
+    width: "100%",
+    border: "1px solid #cfcfcf",
+    borderRadius: 10,
+    fontSize: 11,
+    background: dim ? "#f3f4f6" : "#fff",
+    color: isAuto ? "#9ca3af" : "#111",
+    fontStyle: isAuto ? "italic" : "normal",
+  };
 
-if (!focused) {
+  if (!focused) {
+    return (
+      <input
+        value={displayValue}
+        placeholder={autoNote ? "" : "Notes…"}
+        onFocus={() => setFocused(true)}
+        onChange={(e) => handleChange(e.target.value)}
+        style={{ ...baseStyle, padding: "4px 8px" }}
+      />
+    );
+  }
+
   return (
-    <input
-      value={displayValue}
-      placeholder={autoNote ? "" : "Notes…"}
-      onFocus={() => setFocused(true)}
-      onChange={(e) => handleChange(e.target.value)}
-      style={{
-        ...baseStyle,
-        padding: "4px 8px",
-      }}
-    />
-  );
-}
-
-return (
     <textarea
       value={displayValue}
       placeholder={autoNote ? "" : "Notes…"}
@@ -658,7 +656,6 @@ function stateBtnStyle(
   active: boolean
 ): React.CSSProperties {
   const c = active ? BTN[kind] : BTN.OFF;
-
   return {
     border: `1px solid ${c.border}`,
     borderRadius: 10,
@@ -677,8 +674,8 @@ function stateBtnStyle(
 const topActionBtnStyle: React.CSSProperties = {
   border: "1px solid #cfcfcf",
   borderRadius: 10,
-  padding: "6px 10px",
-  fontSize: 12,
+  padding: "4px 8px",
+  fontSize: 10,
   fontWeight: 800,
   background: "#fafafa",
   color: "#333",

@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { Chapter3Checklist } from "@/components/checklists/Chapter3Checklist";
-import Chapter4Checklist from "@/components/checklists/Chapter4Checklist";
-import Chapter5Checklist from "@/components/checklists/Chapter5Checklist";
-import Chapter6Checklist from "@/components/checklists/Chapter6Checklist";
+import { ChapterChecklist } from "@/components/checklists/ChapterChecklist";
+import { ch3Rows } from "@/content/checklists/ch3";
+import { ch4Rows } from "@/content/checklists/ch4";
+import { ch5Rows } from "@/content/checklists/ch5";
+import { ch6Rows } from "@/content/checklists/ch6";
 import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
@@ -287,7 +288,7 @@ function handleUpdateSections() {
         <header style={{ marginBottom: 16 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#989898" }}>2024 IBC Review Worksheet</h1>
           <p style={{ margin: "6px 0 0", color: "#989898" }}>
-            This review worksheet assists in evaluating buildings for compliance with the 2024 International Building Code. It functions primarily as a dynamic checklist system driven by project inputs, while also serving as a formal record of the plan review.
+            This worksheet assists in evaluating building designs for compliance with the 2024 International Building Code, functioning both as a dynamic, input-driven checklist and formal plan review record.
           </p>
         </header>
 
@@ -496,7 +497,7 @@ function handleUpdateSections() {
                       {project.stories.length === 0 ? (
                         <tr>
                           <td style={tdStyle} colSpan={9}>
-                            <em style={{ color: "#555" }}>Increase stories using the Module 2 controls above.</em>
+                            <em style={{ color: "#555" }}>Increase stories Above or Below Grade using the Module 2 controls above.</em>
                           </td>
                         </tr>
                       ) : (
@@ -655,31 +656,75 @@ function handleUpdateSections() {
                     </p>
                   </div>
                 </div>
-
-                <Chapter3Checklist
+                <ChapterChecklist
+                  rows={ch3Rows}
                   responses={ch3Responses}
                   setResponses={setCh3Responses}
                   externalCollapsed={ch3Collapsed}
                   setExternalCollapsed={setCh3Collapsed}
                 />
-                <Chapter4Checklist
+              </section>
+            </div>
+
+            {/* Chapter 4 checklist panel */}
+            <div id="ch4" style={{ scrollMarginTop: 12 }}>
+              <section style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div>
+                    <div style={moduleTagStyle}>CH 4</div>
+                    <h2 style={cardTitleStyle}>Chapter 4: Special Detailed Requirements Based on Occupancy and Use</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This chapter provides detailed criteria for special uses and occupancies.
+                    </p>
+                  </div>
+                </div>
+                <ChapterChecklist
+                  rows={ch4Rows}
                   responses={ch4Responses}
                   setResponses={setCh4Responses}
-                  externalCollapsed={ch4Collapsed}
-                  setExternalCollapsed={setCh4Collapsed}
                 />
-                <Chapter5Checklist
-                  responses={ch5Responses}
-                  setResponses={setCh5Responses}
-                  externalCollapsed={ch5Collapsed}
-                  setExternalCollapsed={setCh5Collapsed}
+              </section>
+            </div>
+
+            {/* Chapter 5 checklist panel */}
+            <div id="ch5" style={{ scrollMarginTop: 12 }}>
+              <section style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div>
+                    <div style={moduleTagStyle}>CH 5</div>
+                    <h2 style={cardTitleStyle}>Chapter 5: General Building Heights and Areas</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This chapter establishes the limits to which a building can be built.
+                    </p>
+                  </div>
+                </div>            
+                <ChapterChecklist
+                  rows={ch5Rows}
+                  responses={ch4Responses}
+                  setResponses={setCh4Responses}
                 />
-                <Chapter6Checklist
-                  responses={ch6Responses}
-                  setResponses={setCh6Responses}
-                  externalCollapsed={ch6Collapsed}
-                  setExternalCollapsed={setCh6Collapsed}
+              </section>
+            </div>
+
+
+            {/* Chapter 6 checklist panel */}
+            <div id="ch6" style={{ scrollMarginTop: 12 }}>
+              <section style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                  <div>
+                    <div style={moduleTagStyle}>CH 6</div>
+                    <h2 style={cardTitleStyle}>Chapter 6: Types of Construction</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This Chapter establishes five types of construction in which each building must be categorized.
+                    </p>
+                  </div>
+                </div>
+                <ChapterChecklist
+                  rows={ch6Rows}
+                  responses={ch4Responses}
+                  setResponses={setCh4Responses}
                 />
+
               </section>
             </div>
           </div>
@@ -1016,7 +1061,7 @@ const miniBtnStyle: React.CSSProperties = {
   border: "1px solid #cfcfcf",
   borderRadius: 10,
   padding: "4px 8px",
-  fontSize: 12,
+  fontSize: 10,
   fontWeight: 800,
   background: "#fafafa",
   color: "#333",
@@ -1033,7 +1078,7 @@ const cardHeaderStyle: React.CSSProperties = {
 
 const moduleTagStyle: React.CSSProperties = {
   display: "inline-block",
-  fontSize: 11,
+  fontSize: 10,
   letterSpacing: 0.8,
   fontWeight: 800,
   color: "#555",
