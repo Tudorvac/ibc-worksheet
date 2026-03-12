@@ -2,6 +2,9 @@
 
 import React from "react";
 import { Chapter3Checklist } from "@/components/checklists/Chapter3Checklist";
+import Chapter4Checklist from "@/components/checklists/Chapter4Checklist";
+import Chapter5Checklist from "@/components/checklists/Chapter5Checklist";
+import Chapter6Checklist from "@/components/checklists/Chapter6Checklist";
 import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
@@ -16,7 +19,13 @@ import {
 
 export default function Home() {
   const [ch3Responses, setCh3Responses] = React.useState<ChecklistChapterResponses>({});
+  const [ch4Responses, setCh4Responses] = React.useState<ChecklistChapterResponses>({});
+  const [ch5Responses, setCh5Responses] = React.useState<ChecklistChapterResponses>({});
+  const [ch6Responses, setCh6Responses] = React.useState<ChecklistChapterResponses>({});
   const [ch3Collapsed, setCh3Collapsed] = React.useState<Set<string>>(new Set());
+  const [ch4Collapsed, setCh4Collapsed] = React.useState<Set<string>>(new Set());
+  const [ch5Collapsed, setCh5Collapsed] = React.useState<Set<string>>(new Set());
+  const [ch6Collapsed, setCh6Collapsed] = React.useState<Set<string>>(new Set());
   const [pendingNaIds, setPendingNaIds] = React.useState<Set<string> | null>(null);
   const [conflictCodes, setConflictCodes] = React.useState<string[]>([]);
   
@@ -303,25 +312,25 @@ function handleUpdateSections() {
           >
             <div
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 800,
                 letterSpacing: 0.8,
                 color: "#666",
                 marginBottom: 10,
               }}
             >
-              MODULES
+              BUILDING INFORMATION
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod1")}>
-                MOD 1
+                Building Information Summary
               </button>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod2")}>
-                MOD 2
+                Building Heights & Areas
               </button>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>
-                MOD 3
+                Other Building Information
               </button>
             </div>
 
@@ -329,7 +338,7 @@ function handleUpdateSections() {
 
             <div
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 800,
                 letterSpacing: 0.8,
                 color: "#666",
@@ -341,29 +350,48 @@ function handleUpdateSections() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch3")}>
-                CH 3
+                CH 3 Occupancy & Use
+              </button>
+              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch4")}>
+                CH 4 Special Occupancy & Use
+              </button>
+              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch5")}>
+                CH 5 Heights and Areas
+              </button>
+              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch6")}>
+                CH 6 Types of Construction
               </button>
               <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 4
+                CH 7 Fire-rated Assemblies
               </button>
               <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 5
+                CH 8 Interior Finishes
               </button>
               <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 6
+                CH 9 Fire Protection Systems
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 10 Means of Egress
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 11 Accessibility
               </button>
             </div>
           </nav>
 
           {/* RIGHT COLUMN (all panels stacked) */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    
             {/* Module 1 */}
             <div id="mod1" style={{ scrollMarginTop: 12 }}>
               <section style={cardStyle}>
                 <div style={cardHeaderStyle}>
                   <div>
                     <div style={moduleTagStyle}>MOD 1</div>
-                    <h2 style={cardTitleStyle}>General Building Information</h2>
+                    <h2 style={cardTitleStyle}>Building Summary</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This module contains general building information.
+                    </p>
                   </div>
                 </div>
 
@@ -424,8 +452,10 @@ function handleUpdateSections() {
                 <div style={cardHeaderStyle}>
                   <div>
                     <div style={moduleTagStyle}>MOD 2</div>
-                    <h2 style={cardTitleStyle}>General Building Heights & Areas</h2>
-                    <div>This module establishes building heights, areas, occupancies, and uses including mezzanines, accessory and mixed occupancies.</div>
+                    <h2 style={cardTitleStyle}>Building Heights & Areas</h2>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This module establishes building heights, areas, occupancies, and uses including mezzanines, accessory and mixed occupancies.
+                    </p>
                   </div>
                 </div>
 
@@ -605,7 +635,7 @@ function handleUpdateSections() {
                   <div>
                     <div style={moduleTagStyle}>MOD 3</div>
                     <h2 style={cardTitleStyle}>Other Building Information</h2>
-                    <p style={{ margin: "6px 0 0", color: "#444" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
                       Placeholder — Module 3 will be designed after Modules 1–2 are stable.
                     </p>
                   </div>
@@ -620,8 +650,8 @@ function handleUpdateSections() {
                   <div>
                     <div style={moduleTagStyle}>CH 3</div>
                     <h2 style={cardTitleStyle}>Chapter 3: Occupancy Classification and Use</h2>
-                    <p style={{ margin: "6px 0 0", color: "#444" }}>
-                      This chapter controls the classification of all buildings and structures as to occupancy and use. 
+                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                      This chapter controls the classification of all buildings and structures as to occupancy and use.
                     </p>
                   </div>
                 </div>
@@ -631,6 +661,24 @@ function handleUpdateSections() {
                   setResponses={setCh3Responses}
                   externalCollapsed={ch3Collapsed}
                   setExternalCollapsed={setCh3Collapsed}
+                />
+                <Chapter4Checklist
+                  responses={ch4Responses}
+                  setResponses={setCh4Responses}
+                  externalCollapsed={ch4Collapsed}
+                  setExternalCollapsed={setCh4Collapsed}
+                />
+                <Chapter5Checklist
+                  responses={ch5Responses}
+                  setResponses={setCh5Responses}
+                  externalCollapsed={ch5Collapsed}
+                  setExternalCollapsed={setCh5Collapsed}
+                />
+                <Chapter6Checklist
+                  responses={ch6Responses}
+                  setResponses={setCh6Responses}
+                  externalCollapsed={ch6Collapsed}
+                  setExternalCollapsed={setCh6Collapsed}
                 />
               </section>
             </div>
@@ -690,7 +738,7 @@ function Field(props: { label: string; placeholder: string; muted?: boolean }) {
   const { label, placeholder, muted } = props;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
       <div
         style={{
           border: "1px solid #cfcfcf",
@@ -717,7 +765,7 @@ function SelectField(props: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -866,7 +914,7 @@ function FeetInchesInput(props: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
 
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <NumBox
@@ -950,7 +998,7 @@ const navBtnStyle: React.CSSProperties = {
   border: "1px solid #cfcfcf",
   borderRadius: 10,
   padding: "10px 10px",
-  fontSize: 13,
+  fontSize: 11,
   fontWeight: 700,
   background: "#fafafa",
   color: "#333",
@@ -967,8 +1015,9 @@ const navBtnDisabledStyle: React.CSSProperties = {
 const miniBtnStyle: React.CSSProperties = {
   border: "1px solid #cfcfcf",
   borderRadius: 10,
-  padding: "6px 8px",
-  fontSize: 14,
+  padding: "4px 8px",
+  fontSize: 12,
+  fontWeight: 800,
   background: "#fafafa",
   color: "#333",
   cursor: "pointer",
@@ -986,7 +1035,7 @@ const moduleTagStyle: React.CSSProperties = {
   display: "inline-block",
   fontSize: 11,
   letterSpacing: 0.8,
-  fontWeight: 700,
+  fontWeight: 800,
   color: "#555",
   border: "1px solid #d6d6d6",
   borderRadius: 999,
@@ -998,7 +1047,7 @@ const cardTitleStyle: React.CSSProperties = {
   margin: 0,
   fontSize: 18,
   fontWeight: 700,
-  color: "#555",
+  color: "#111",
 };
 
 const gridStyle: React.CSSProperties = {

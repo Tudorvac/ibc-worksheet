@@ -18,6 +18,19 @@ export type ChecklistResponse = {
 
 export type ChecklistChapterResponses = Record<string, ChecklistResponse>;
 
+// ADD THESE TWO:
+export type ChecklistRowDef = {
+  id: string;
+  code: string;
+  title: string;
+  isMainSection: boolean;
+};
+
+export type ApplicabilityRule = {
+  id: string;
+  occupancies: string[]; // empty = always applicable
+};
+
 export interface AreaRow {
   areaNo: 1 | 2 | 3 | 4;
   occupancy: OccupancyCode | "";

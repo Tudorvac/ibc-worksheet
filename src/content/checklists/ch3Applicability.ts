@@ -22,7 +22,7 @@ export const ch3ApplicabilityRules: ApplicabilityRule[] = [
   // 303 - Assembly Group A (A-1 through A-5, E)
   { id: "303.1.3",   occupancies: ["A-1","A-2","A-3","A-4","A-5","B","E"] },
   { id: "303.1.4",   occupancies: ["A-1","A-2","A-3","A-4","A-5","B","E"] },
-  { id: "303.1.5",   occupancies: ["A-1","A-2","A-3","A-4","A-5"] },
+  { id: "303.1.5",   occupancies: ["A-1","A-2","A-3","A-4","A-5","B"] },
   { id: "303.2",     occupancies: ["A-1","A-2","A-3","A-4","A-5"] },
   { id: "303.3",     occupancies: ["A-2","A-3","A-4","A-5"] },
   { id: "303.4",     occupancies: ["A-3","A-4","A-5"] },

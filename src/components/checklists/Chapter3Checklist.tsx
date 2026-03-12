@@ -315,17 +315,17 @@ React.useEffect(() => {
           style={{
             display: "grid",
             gridTemplateColumns: "140px 1fr 280px 60px",
-            gap: 35,
+            gap: 10,
             alignItems: "center",
-            padding: "6px 10px",
+            padding: "4px 8px",
             borderBottom: "1px solid #d0d0d0",
             background: "#fafafa",
             fontSize: 12,
             fontWeight: 800,
-            color: "#444",
+            color: "#333",
           }}
         >
-          <div>Resolved / Indet. / N/A</div>
+          <div>Resolv. / Indet. / N/A</div>
           <div>Section / Title</div>
           <div>Notes</div>
           <div style={{ textAlign: "right" }}>Item</div>
@@ -339,7 +339,7 @@ React.useEffect(() => {
                   key={row.id}
                   style={{
                     padding: "8px 10px",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     color: "#444",
                     background: "#fff",
                     borderBottom: "1px solid #e9e9e9",
@@ -382,7 +382,7 @@ React.useEffect(() => {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "140px 1fr 280px 60px",
-                  gap: 10,
+                  gap: 6,
                   alignItems: "center",
                   padding: "4px 10px",
                   borderBottom: "1px solid #e9e9e9",
@@ -470,8 +470,8 @@ React.useEffect(() => {
                       disabled={!hasKids}
                       onClick={() => hasKids && toggleCollapsed(row.code)}
                       style={{
-                        width: 18,
-                        height: 18,
+                        width: 14,
+                        height: 14,
                         border: "none",
                         background: "transparent",
                         padding: 0,
@@ -500,7 +500,7 @@ React.useEffect(() => {
                     >
                       <div
                         style={{
-                          fontWeight: 800,
+                          fontWeight: 700,
                           color: codeTextColor,
                           whiteSpace: "nowrap",
                         }}
@@ -511,7 +511,7 @@ React.useEffect(() => {
                       <div
                         style={{
                           color: mainTextColor,
-                          fontWeight: level === 0 ? 800 : 600,
+                          fontWeight: level === 0 ? 700 : 400,
                           lineHeight: 1.15,
                           minWidth: 0,
                           overflowWrap: "anywhere",
@@ -548,7 +548,7 @@ React.useEffect(() => {
                 <div
                   style={{
                     textAlign: "right",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     color: rowIsNA ? "rgba(68, 68, 68, 0.5)" : "#444",
                   }}
                 >
@@ -580,7 +580,7 @@ function CollapsedSummaryText(props: {
         alignItems: "baseline",
         whiteSpace: "nowrap",
         fontSize: 11,
-        fontWeight: 500, // helper text
+        fontWeight: 600, // helper text
         opacity: dim ? 0.75 : 1,
       }}
       title="Counts of hidden (collapsed) descendant rows"
@@ -640,18 +640,15 @@ if (!focused) {
   );
 }
 
-  return (
+return (
     <textarea
       value={displayValue}
       placeholder={autoNote ? "" : "Notes…"}
       onBlur={() => setFocused(false)}
       onChange={(e) => handleChange(e.target.value)}
       rows={3}
-      style={{
-        ...baseStyle,
-        padding: "6px 8px",
-        resize: "vertical",
-      }}
+      autoFocus
+      style={{ ...baseStyle, padding: "6px 8px", resize: "none" }}
     />
   );
 }
@@ -667,7 +664,7 @@ function stateBtnStyle(
     borderRadius: 10,
     padding: "3px 6px",
     fontSize: 11,
-    fontWeight: 900,
+    fontWeight: 800,
     lineHeight: 1.1,
     background: c.bg,
     color: c.text,
@@ -682,7 +679,7 @@ const topActionBtnStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "6px 10px",
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 800,
   background: "#fafafa",
   color: "#333",
   cursor: "pointer",
