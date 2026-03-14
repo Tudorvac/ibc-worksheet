@@ -231,7 +231,13 @@ function handleUpdateSections() {
 }
 
   return (
-    <main style={{ padding: "24px", fontFamily: "system-ui, Arial, sans-serif" }}>
+    <main style={{ 
+      height: "100vh",
+      overflowY: "auto",
+      overflowX: "auto",
+      padding: "24px", 
+      fontFamily: "system-ui, Arial, sans-serif",
+    }}>
 
           {pendingNaIds && (
             <div style={{
@@ -284,15 +290,15 @@ function handleUpdateSections() {
             </div>
           )}
 
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ minWidth: 1000, padding: "12px 120px", boxSizing: "border-box" }}>
         <header style={{ marginBottom: 16 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#989898" }}>2024 IBC Review Worksheet</h1>
           <p style={{ margin: "6px 0 0", color: "#989898" }}>
-            This worksheet assists in evaluating building designs for compliance with the 2024 International Building Code, functioning both as a dynamic, input-driven checklist and formal plan review record.
+            This worksheet assists in evaluating buildings for compliance with the 2024 International Building Code, functioning as a dynamic, input-driven checklist and formal record.
           </p>
         </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: 14 }}>
           {/* LEFT NAV (sticky jump menu) */}
           <nav
             style={{
@@ -307,25 +313,25 @@ function handleUpdateSections() {
 
               border: "1px solid #d6d6d6",
               borderRadius: 14,
-              padding: 12,
+              padding: 8,
               background: "#fff",
             }}
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 800,
                 letterSpacing: 0.8,
                 color: "#666",
                 marginBottom: 10,
               }}
             >
-              BUILDING INFORMATION
+              Information Modules
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod1")}>
-                Building Information Summary
+                Building Summary
               </button>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod2")}>
                 Building Heights & Areas
@@ -339,14 +345,14 @@ function handleUpdateSections() {
 
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 800,
+                fontSize: 14,
+                fontWeight: 700,
                 letterSpacing: 0.8,
                 color: "#666",
                 marginBottom: 10,
               }}
             >
-              CODE CHECKLISTS
+              Checklist Modules
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -357,7 +363,7 @@ function handleUpdateSections() {
                 CH 4 Special Occupancy & Use
               </button>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch5")}>
-                CH 5 Heights and Areas
+                CH 5 Heights & Areas
               </button>
               <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch6")}>
                 CH 6 Types of Construction
@@ -376,6 +382,72 @@ function handleUpdateSections() {
               </button>
               <button type="button" style={navBtnDisabledStyle} disabled>
                 CH 11 Accessibility
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 12 Interior Environment
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 13 Energy Efficiency
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 14 Exterior Walls
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 15 Roof Assemblies & Structures
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 16 Structural Design
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 17 Special Inspections
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 18 Soils & Foundations
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 19 Concrete
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 20 Aluminum
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 21 Masonry
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 22 Steel
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 23 Wood
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 24 Glass & Glazing
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 25 Gypsum Panels & Plaster
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 26 Plastic
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 27 Electrical
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 28 Mechanical Systems
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 29 Plumbing Systems
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 30 Elevators & Conveyors
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 31 Special Construction
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 32 ROW Encroachments
+              </button>
+              <button type="button" style={navBtnDisabledStyle} disabled>
+                CH 33 Construction Safeguards
               </button>
             </div>
           </nav>
@@ -411,7 +483,9 @@ function handleUpdateSections() {
                     options={dropdownData.lists["Construction Type"] ?? []}
                     onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, constructionType: v } }))}
                   />
+                  
                   <Field label="Stories Below Grade" placeholder={String(countBelowStories(project))} muted />
+                  
                   <Field
                     label="Total Below-Grade Area"
                     placeholder={totalBelowGradeArea(project).toLocaleString()}
@@ -700,8 +774,8 @@ function handleUpdateSections() {
                 </div>            
                 <ChapterChecklist
                   rows={ch5Rows}
-                  responses={ch4Responses}
-                  setResponses={setCh4Responses}
+                  responses={ch5Responses}
+                  setResponses={setCh5Responses}
                 />
               </section>
             </div>
@@ -721,8 +795,8 @@ function handleUpdateSections() {
                 </div>
                 <ChapterChecklist
                   rows={ch6Rows}
-                  responses={ch4Responses}
-                  setResponses={setCh4Responses}
+                  responses={ch6Responses}
+                  setResponses={setCh6Responses}
                 />
 
               </section>
@@ -779,7 +853,11 @@ function occupancyGroups(project: ProjectState): string {
 
 /* ---- Small components ---- */
 
-function Field(props: { label: string; placeholder: string; muted?: boolean }) {
+function Field(props: {
+  label: string; 
+  placeholder: string; 
+  muted?: boolean 
+}) {
   const { label, placeholder, muted } = props;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -787,8 +865,9 @@ function Field(props: { label: string; placeholder: string; muted?: boolean }) {
       <div
         style={{
           border: "1px solid #cfcfcf",
-          borderRadius: 8,
-          padding: "10px 12px",
+          borderRadius: 10,
+          padding: "6px 10px",
+          fontSize: 13,
           background: muted ? "#f6f6f6" : "#fff",
           color: muted ? "#666" : "#111",
         }}
@@ -815,13 +894,14 @@ function SelectField(props: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          border: "1px solid #cfcfcf",
-          borderRadius: 8,
-          padding: "10px 12px",
-          background: "#fff",
-          color: "#111",
-          fontWeight: 500,
-          appearance: "auto",
+            border: "1px solid #cfcfcf",
+            borderRadius: 10,
+            padding: "6px 10px",
+            fontSize: 13,
+            background: "#fff",
+            color: "#111",
+            fontWeight: 500,
+            appearance: "auto",
         }}
       >
         <option value="">{placeholder ?? "Select…"}</option>
@@ -1013,11 +1093,12 @@ function NumBox(props: {
       style={{
         border: "1px solid #cfcfcf",
         borderRadius: 8,
-        padding: "10px 12px",
-        width: 70,
+        padding: "6px 12px",
+        width: 60,
         background: "#fff",
         color: "#111",
-        fontWeight: 500,
+        fontWeight: 400,
+        fontSize: 13,
       }}
     />
   );
@@ -1098,7 +1179,7 @@ const cardTitleStyle: React.CSSProperties = {
 const gridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 12,
+  gap: 10,
 };
 
 const tableWrapStyle: React.CSSProperties = {

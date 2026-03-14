@@ -1,7 +1,6 @@
 import type { ChecklistRowDef } from "@/lib/types";
 
 export const ch6Rows: ChecklistRowDef[] = [
-  { id: "ch6-title", code: "", title: "Types of Construction", isMainSection: false },
   { id: "601", code: "601", title: "General", isMainSection: true },
   { id: "601.1", code: "601.1", title: "Scope", isMainSection: false },
   { id: "602", code: "602", title: "Construction Classification", isMainSection: true },
