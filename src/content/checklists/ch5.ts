@@ -3,8 +3,10 @@ import type { ChecklistRowDef } from "@/lib/types";
 export const ch5Rows: ChecklistRowDef[] = [
   { id: "501", code: "501", title: "General", isMainSection: true },
   { id: "501.1", code: "501.1", title: "Scope", isMainSection: false },
+  
   { id: "502", code: "502", title: "Building Address", isMainSection: true },
   { id: "502.1", code: "502.1", title: "Address Identification", isMainSection: false },
+  
   { id: "503", code: "503", title: "General Building Height and Area Limitations", isMainSection: true },
   { id: "503.1", code: "503.1", title: "General", isMainSection: false },
   { id: "503.1.1", code: "503.1.1", title: "Special Industrial Occupancies", isMainSection: false },
@@ -12,6 +14,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "503.1.3", code: "503.1.3", title: "Type I Construction", isMainSection: false },
   { id: "503.1.4", code: "503.1.4", title: "Occupiable Roofs", isMainSection: false },
   { id: "503.1.4.1", code: "503.1.4.1", title: "Enclosures Over Occupiable Roof Areas", isMainSection: false },
+  
   { id: "504", code: "504", title: "Building Height and Number of Stories", isMainSection: true },
   { id: "504.1", code: "504.1", title: "General", isMainSection: false },
   { id: "504.1.1", code: "504.1.1", title: "Unlimited Area Buildings", isMainSection: false },
@@ -19,6 +22,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "504.2", code: "504.2", title: "Mixed Occupancy", isMainSection: false },
   { id: "504.3", code: "504.3", title: "Height in Feet", isMainSection: false },
   { id: "504.4", code: "504.4", title: "Number of Stories", isMainSection: false },
+  
   { id: "505", code: "505", title: "Mezzanines and Equipment Platforms", isMainSection: true },
   { id: "505.1", code: "505.1", title: "General", isMainSection: false },
   { id: "505.2", code: "505.2", title: "Mezzanines", isMainSection: false },
@@ -30,6 +34,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "505.3.1", code: "505.3.1", title: "Area Limitation", isMainSection: false },
   { id: "505.3.2", code: "505.3.2", title: "Automatic Sprinkler System", isMainSection: false },
   { id: "505.3.3", code: "505.3.3", title: "Guards", isMainSection: false },
+  
   { id: "506", code: "506", title: "Building Area", isMainSection: true },
   { id: "506.1", code: "506.1", title: "General", isMainSection: false },
   { id: "506.1.1", code: "506.1.1", title: "Unlimited Area Buildings", isMainSection: false },
@@ -44,6 +49,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "506.3.2", code: "506.3.2", title: "Minimum Frontage Distance", isMainSection: false },
   { id: "506.3.3", code: "506.3.3", title: "Amount of Increase", isMainSection: false },
   { id: "506.3.3.1", code: "506.3.3.1", title: "Section 507 Buildings", isMainSection: false },
+  
   { id: "507", code: "507", title: "Unlimited Area Buildings", isMainSection: true },
   { id: "507.1", code: "507.1", title: "General", isMainSection: false },
   { id: "507.1.1", code: "507.1.1", title: "Accessory Occupancies", isMainSection: false },
@@ -69,6 +75,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "507.11", code: "507.11", title: "Group E Buildings", isMainSection: false },
   { id: "507.12", code: "507.12", title: "Motion Picture Theaters", isMainSection: false },
   { id: "507.13", code: "507.13", title: "Covered and Open Mall Buildings and Anchor Buildings", isMainSection: false },
+  
   { id: "508", code: "508", title: "Mixed Use and Occupancy", isMainSection: true },
   { id: "508.1", code: "508.1", title: "General", isMainSection: false },
   { id: "508.2", code: "508.2", title: "Accessory Occupancies", isMainSection: false },
@@ -100,6 +107,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "508.5.9", code: "508.5.9", title: "Accessibility", isMainSection: false },
   { id: "508.5.10", code: "508.5.10", title: "Ventilation", isMainSection: false },
   { id: "508.5.11", code: "508.5.11", title: "Plumbing Facilities", isMainSection: false },
+  
   { id: "509", code: "509", title: "Incidental Uses", isMainSection: true },
   { id: "509.1", code: "509.1", title: "General", isMainSection: false },
   { id: "509.2", code: "509.2", title: "Occupancy Classification", isMainSection: false },
@@ -109,6 +117,7 @@ export const ch5Rows: ChecklistRowDef[] = [
   { id: "509.4.1.1", code: "509.4.1.1", title: "Type IV-B and IV-C Construction", isMainSection: false },
   { id: "509.4.2", code: "509.4.2", title: "Protection", isMainSection: false },
   { id: "509.4.2.1", code: "509.4.2.1", title: "Protection Limitation", isMainSection: false },
+  
   { id: "510", code: "510", title: "Special Provisions", isMainSection: true },
   { id: "510.1", code: "510.1", title: "General", isMainSection: false },
   { id: "510.2", code: "510.2", title: "Horizontal Building Separation Allowance", isMainSection: false },
