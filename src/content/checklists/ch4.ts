@@ -3,6 +3,7 @@ import type { ChecklistRowDef } from "@/lib/types";
 export const ch4Rows: ChecklistRowDef[] = [
   { id: "401", code: "401", title: "Scope", isMainSection: true },
   { id: "401.1", code: "401.1", title: "Detailed Occupancy and Use Requirements", isMainSection: false },
+  
   { id: "402", code: "402", title: "Covered Mall and Open Mall Buildings", isMainSection: true },
   { id: "402.1", code: "402.1", title: "Applicability", isMainSection: false },
   { id: "402.1.1", code: "402.1.1", title: "Open Mall Building Perimeter Line", isMainSection: false },
@@ -56,6 +57,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "402.8.6.1", code: "402.8.6.1", title: "Exit Passageways", isMainSection: false },
   { id: "402.8.7", code: "402.8.7", title: "Service Areas Fronting on Exit Passageways", isMainSection: false },
   { id: "402.8.8", code: "402.8.8", title: "Security Grilles and Doors", isMainSection: false },
+  
   { id: "403", code: "403", title: "High-Rise Buildings", isMainSection: true },
   { id: "403.1", code: "403.1", title: "Applicability", isMainSection: false },
   { id: "403.2", code: "403.2", title: "Construction", isMainSection: false },
@@ -99,6 +101,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "403.6", code: "403.6", title: "Elevators", isMainSection: false },
   { id: "403.6.1", code: "403.6.1", title: "Fire Service Access Elevator", isMainSection: false },
   { id: "403.6.2", code: "403.6.2", title: "Occupant Evacuation Elevators", isMainSection: false },
+  
   { id: "404", code: "404", title: "Atriums", isMainSection: true },
   { id: "404.1", code: "404.1", title: "General", isMainSection: false },
   { id: "404.2", code: "404.2", title: "Use", isMainSection: false },
@@ -111,6 +114,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "404.9", code: "404.9", title: "Exit Access Travel Distance", isMainSection: false },
   { id: "404.10", code: "404.10", title: "Exit Stairways in an Atrium", isMainSection: false },
   { id: "404.11", code: "404.11", title: "Interior Exit Stairway Discharge", isMainSection: false },
+  
   { id: "405", code: "405", title: "Underground Buildings", isMainSection: true },
   { id: "405.1", code: "405.1", title: "General", isMainSection: false },
   { id: "405.2", code: "405.2", title: "Construction Requirements", isMainSection: false },
@@ -130,6 +134,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "405.8.1", code: "405.8.1", title: "Standby Power Loads", isMainSection: false },
   { id: "405.8.2", code: "405.8.2", title: "Emergency Power Loads", isMainSection: false },
   { id: "405.9", code: "405.9", title: "Standpipe System", isMainSection: false },
+  
   { id: "406", code: "406", title: "Motor-Vehicle-Related Occupancies", isMainSection: true },
   { id: "406.1", code: "406.1", title: "General", isMainSection: false },
   { id: "406.2", code: "406.2", title: "Design", isMainSection: false },
@@ -191,6 +196,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "406.8.2.1", code: "406.8.2.1", title: "System Activation", isMainSection: false },
   { id: "406.8.2.2", code: "406.8.2.2", title: "Failure of the Gas Detection System", isMainSection: false },
   { id: "406.8.3", code: "406.8.3", title: "Automatic Sprinkler System", isMainSection: false },
+  
   { id: "407", code: "407", title: "Group I-2", isMainSection: true },
   { id: "407.1", code: "407.1", title: "General", isMainSection: false },
   { id: "407.2", code: "407.2", title: "Corridors Continuity and Separation", isMainSection: false },
@@ -234,6 +240,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "407.9", code: "407.9", title: "Automatic Fire Detection", isMainSection: false },
   { id: "407.10", code: "407.10", title: "Secured Yards", isMainSection: false },
   { id: "407.11", code: "407.11", title: "Electrical Systems", isMainSection: false },
+  
   { id: "408", code: "408", title: "Group I-3", isMainSection: true },
   { id: "408.1", code: "408.1", title: "General", isMainSection: false },
   { id: "408.2", code: "408.2", title: "Other Occupancies", isMainSection: false },
@@ -267,6 +274,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "408.9", code: "408.9", title: "Windowless Buildings", isMainSection: false },
   { id: "408.10", code: "408.10", title: "Fire Alarm System", isMainSection: false },
   { id: "408.11", code: "408.11", title: "Automatic Sprinkler System", isMainSection: false },
+  
   { id: "409", code: "409", title: "Motion Picture Projection Rooms", isMainSection: true },
   { id: "409.1", code: "409.1", title: "General", isMainSection: false },
   { id: "409.1.1", code: "409.1.1", title: "Projection Room Required", isMainSection: false },
@@ -277,6 +285,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "409.3.3", code: "409.3.3", title: "Projection Machines", isMainSection: false },
   { id: "409.4", code: "409.4", title: "Lighting Control", isMainSection: false },
   { id: "409.5", code: "409.5", title: "Miscellaneous Equipment", isMainSection: false },
+  
   { id: "410", code: "410", title: "Stages, Platforms and Technical Production Areas", isMainSection: true },
   { id: "410.1", code: "410.1", title: "Applicability", isMainSection: false },
   { id: "410.2", code: "410.2", title: "Stages", isMainSection: false },
@@ -305,6 +314,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "410.5.3.4", code: "410.5.3.4", title: "Path of Egress Travel", isMainSection: false },
   { id: "410.5.3.5", code: "410.5.3.5", title: "Width", isMainSection: false },
   { id: "410.6", code: "410.6", title: "Automatic Sprinkler System", isMainSection: false },
+  
   { id: "411", code: "411", title: "Special Amusement Areas", isMainSection: true },
   { id: "411.1", code: "411.1", title: "General", isMainSection: false },
   { id: "411.2", code: "411.2", title: "Automatic Sprinkler System", isMainSection: false },
@@ -316,6 +326,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "411.4.1", code: "411.4.1", title: "Photoluminescent Exit Signs", isMainSection: false },
   { id: "411.5", code: "411.5", title: "Interior Finish", isMainSection: false },
   { id: "411.6", code: "411.6", title: "Flammable Decorative Materials", isMainSection: false },
+  
   { id: "412", code: "412", title: "Aircraft-Related Occupancies", isMainSection: true },
   { id: "412.1", code: "412.1", title: "General", isMainSection: false },
   { id: "412.2", code: "412.2", title: "Airport Traffic Control Towers", isMainSection: false },
@@ -372,9 +383,11 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "412.7.3", code: "412.7.3", title: "Means of Egress", isMainSection: false },
   { id: "412.7.4", code: "412.7.4", title: "Rooftop Heliports and Helistops", isMainSection: false },
   { id: "412.7.5", code: "412.7.5", title: "Standpipe System", isMainSection: false },
+  
   { id: "413", code: "413", title: "Combustible Storage", isMainSection: true },
   { id: "413.1", code: "413.1", title: "General", isMainSection: false },
   { id: "413.2", code: "413.2", title: "Attic, Under-Floor and Concealed Spaces", isMainSection: false },
+  
   { id: "414", code: "414", title: "Hazardous Materials", isMainSection: true },
   { id: "414.1", code: "414.1", title: "General", isMainSection: false },
   { id: "414.1.1", code: "414.1.1", title: "Other Provisions", isMainSection: false },
@@ -404,6 +417,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "414.6.1.1", code: "414.6.1.1", title: "Walls", isMainSection: false },
   { id: "414.6.1.2", code: "414.6.1.2", title: "Separation Distance", isMainSection: false },
   { id: "414.6.1.3", code: "414.6.1.3", title: "Noncombustible Construction", isMainSection: false },
+  
   { id: "415", code: "415", title: "Groups H-1, H-2, H-3, H-4 and H-5", isMainSection: true },
   { id: "415.1", code: "415.1", title: "General", isMainSection: false },
   { id: "415.2", code: "415.2", title: "Compliance", isMainSection: false },
@@ -513,6 +527,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "415.11.12.1", code: "415.11.12.1", title: "Metallic and Noncombustible Nonmetallic Exhaust Ducts", isMainSection: false },
   { id: "415.11.12.2", code: "415.11.12.2", title: "Combustible Nonmetallic Exhaust Ducts", isMainSection: false },
   { id: "415.11.12.3", code: "415.11.12.3", title: "Automatic Sprinkler Locations", isMainSection: false },
+  
   { id: "416", code: "416", title: "Spray Application of Flammable Finishes", isMainSection: true },
   { id: "416.1", code: "416.1", title: "General", isMainSection: false },
   { id: "416.2", code: "416.2", title: "Spray Rooms", isMainSection: false },
@@ -523,11 +538,13 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "416.3.1", code: "416.3.1", title: "Surfaces", isMainSection: false },
   { id: "416.4", code: "416.4", title: "Spray Booths", isMainSection: false },
   { id: "416.5", code: "416.5", title: "Fire Protection", isMainSection: false },
+  
   { id: "417", code: "417", title: "Drying Rooms", isMainSection: true },
   { id: "417.1", code: "417.1", title: "General", isMainSection: false },
   { id: "417.2", code: "417.2", title: "Piping Clearance", isMainSection: false },
   { id: "417.3", code: "417.3", title: "Insulation", isMainSection: false },
   { id: "417.4", code: "417.4", title: "Fire Protection", isMainSection: false },
+  
   { id: "418", code: "418", title: "Organic Coatings", isMainSection: true },
   { id: "418.1", code: "418.1", title: "Building Features", isMainSection: false },
   { id: "418.2", code: "418.2", title: "Location", isMainSection: false },
@@ -535,8 +552,10 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "418.4", code: "418.4", title: "Tank Storage", isMainSection: false },
   { id: "418.5", code: "418.5", title: "Nitrocellulose Storage", isMainSection: false },
   { id: "418.6", code: "418.6", title: "Finished Products", isMainSection: false },
+  
   { id: "419", code: "419", title: "Artificial Decorative Vegetation", isMainSection: true },
   { id: "419.1", code: "419.1", title: "Artificial Decorative Vegetation", isMainSection: false },
+  
   { id: "420", code: "420", title: "Groups I-1, R-1, R-2, R-3 and R-4", isMainSection: true },
   { id: "420.1", code: "420.1", title: "General", isMainSection: false },
   { id: "420.2", code: "420.2", title: "Separation Walls", isMainSection: false },
@@ -552,6 +571,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "420.11", code: "420.11", title: "Group R-2 Dormitory Cooking Facilities", isMainSection: false },
   { id: "420.11.1", code: "420.11.1", title: "Cooking Appliances", isMainSection: false },
   { id: "420.11.2", code: "420.11.2", title: "Cooking Appliances in Sleeping Rooms", isMainSection: false },
+  
   { id: "421", code: "421", title: "Hydrogen Fuel Gas Rooms", isMainSection: true },
   { id: "421.1", code: "421.1", title: "General", isMainSection: false },
   { id: "421.2", code: "421.2", title: "Location", isMainSection: false },
@@ -564,6 +584,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "421.5.2", code: "421.5.2", title: "Failure of the Gas Detection System", isMainSection: false },
   { id: "421.6", code: "421.6", title: "Explosion Control", isMainSection: false },
   { id: "421.7", code: "421.7", title: "Standby Power", isMainSection: false },
+  
   { id: "422", code: "422", title: "Ambulatory Care Facilities", isMainSection: true },
   { id: "422.1", code: "422.1", title: "General", isMainSection: false },
   { id: "422.2", code: "422.2", title: "Separation", isMainSection: false },
@@ -575,6 +596,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "422.5", code: "422.5", title: "Fire Alarm Systems", isMainSection: false },
   { id: "422.6", code: "422.6", title: "Electrical Systems", isMainSection: false },
   { id: "422.7", code: "422.7", title: "Domestic Cooking", isMainSection: false },
+  
   { id: "423", code: "423", title: "Storm Shelters", isMainSection: true },
   { id: "423.1", code: "423.1", title: "General", isMainSection: false },
   { id: "423.2", code: "423.2", title: "Construction", isMainSection: false },
@@ -587,6 +609,7 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "423.5", code: "423.5", title: "Group E Occupancies", isMainSection: false },
   { id: "423.5.1", code: "423.5.1", title: "Design Occupant Capacity", isMainSection: false },
   { id: "423.5.2", code: "423.5.2", title: "Location", isMainSection: false },
+  
   { id: "424", code: "424", title: "Play Structures", isMainSection: true },
   { id: "424.1", code: "424.1", title: "General", isMainSection: false },
   { id: "424.2", code: "424.2", title: "Materials", isMainSection: false },
@@ -594,8 +617,10 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "424.4", code: "424.4", title: "Separation", isMainSection: false },
   { id: "424.5", code: "424.5", title: "Area Limits", isMainSection: false },
   { id: "424.5.1", code: "424.5.1", title: "Design", isMainSection: false },
+  
   { id: "425", code: "425", title: "Hyperbaric Facilities", isMainSection: true },
   { id: "425.1", code: "425.1", title: "Hyperbaric Facilities", isMainSection: false },
+  
   { id: "426", code: "426", title: "Combustible Dusts, Grain Processing and Storage", isMainSection: true },
   { id: "426.1", code: "426.1", title: "General", isMainSection: false },
   { id: "426.1.1", code: "426.1.1", title: "Type of Construction and Height Exceptions", isMainSection: false },
@@ -605,12 +630,14 @@ export const ch4Rows: ChecklistRowDef[] = [
   { id: "426.1.5", code: "426.1.5", title: "Grain Elevators", isMainSection: false },
   { id: "426.1.6", code: "426.1.6", title: "Coal Pockets", isMainSection: false },
   { id: "426.1.7", code: "426.1.7", title: "Tire Rebuilding", isMainSection: false },
+  
   { id: "427", code: "427", title: "Medical Gas Systems", isMainSection: true },
   { id: "427.1", code: "427.1", title: "General", isMainSection: false },
   { id: "427.2", code: "427.2", title: "Interior Supply Location", isMainSection: false },
   { id: "427.2.1", code: "427.2.1", title: "One-Hour Exterior Room", isMainSection: false },
   { id: "427.2.2", code: "427.2.2", title: "One-Hour Interior Room", isMainSection: false },
   { id: "427.2.3", code: "427.2.3", title: "Gas Cabinets", isMainSection: false },
+  
   { id: "428", code: "428", title: "Higher Education Laboratories", isMainSection: true },
   { id: "428.1", code: "428.1", title: "Scope", isMainSection: false },
   { id: "428.2", code: "428.2", title: "Application", isMainSection: false },
