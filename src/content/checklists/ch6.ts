@@ -3,6 +3,7 @@ import type { ChecklistRowDef } from "@/lib/types";
 export const ch6Rows: ChecklistRowDef[] = [
   { id: "601", code: "601", title: "General", isMainSection: true },
   { id: "601.1", code: "601.1", title: "Scope", isMainSection: false },
+  
   { id: "602", code: "602", title: "Construction Classification", isMainSection: true },
   { id: "602.1", code: "602.1", title: "General", isMainSection: false },
   { id: "602.1.1", code: "602.1.1", title: "Minimum Requirements", isMainSection: false },
@@ -41,6 +42,7 @@ export const ch6Rows: ChecklistRowDef[] = [
   { id: "602.4.4.3", code: "602.4.4.3", title: "Concealed Spaces", isMainSection: false },
   { id: "602.4.4.4", code: "602.4.4.4", title: "Exterior Structural Members", isMainSection: false },
   { id: "602.5", code: "602.5", title: "Type V", isMainSection: false },
+  
   { id: "603", code: "603", title: "Combustible Material in Types I and II Construction", isMainSection: true },
   { id: "603.1", code: "603.1", title: "Allowable Materials", isMainSection: false },
   { id: "603.1.1", code: "603.1.1", title: "Ducts", isMainSection: false },
