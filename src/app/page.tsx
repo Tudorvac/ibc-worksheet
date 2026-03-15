@@ -10,6 +10,7 @@ import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
+
 import {
   computeNaRowIds,
   findConflicts,
@@ -17,6 +18,18 @@ import {
   applyNaUpdates,
   computeCollapsedFromNa,
 } from "@/lib/applicability";
+
+import {
+  mapConstructionType,
+  mapSprinklerTag,
+  mapOccupancyKey,
+  getMaxStories,
+  getMaxHeightFt,
+  getAreaFactor,
+  getMostRestrictiveLimit,
+  checkCompliance,
+  type LimitValue,
+} from "@/lib/buildingLimits";
 
 export default function Home() {
   const [ch3Responses, setCh3Responses] = React.useState<ChecklistChapterResponses>({});
@@ -42,6 +55,33 @@ export default function Home() {
     },
     stories: [],
   }));
+
+const buildingLimits = React.useMemo(() => {
+  const ct = mapConstructionType(project.m1.constructionType);
+  const storiesAbove = countAboveStories(project);
+  const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+
+  // Collect unique occupancy keys from all story areas
+  const occKeys = Array.from(new Set(
+    project.stories
+      .flatMap(s => s.areas.map(a => mapOccupancyKey(a.occupancy)))
+      .filter((k): k is NonNullable<typeof k> => k !== null)
+  ));
+
+  if (!ct || occKeys.length === 0) return null;
+
+  const maxStories = getMostRestrictiveLimit(
+    occKeys.map(o => getMaxStories(o, ct, spk))
+  );
+  const maxHeightFt = getMostRestrictiveLimit(
+    occKeys.map(o => getMaxHeightFt(o, ct, spk))
+  );
+  const maxAreaFactor = getMostRestrictiveLimit(
+    occKeys.map(o => getAreaFactor(o, ct, spk))
+  );
+
+  return { maxStories, maxHeightFt, maxAreaFactor, spk, ct };
+}, [project]);
 
   function scrollToId(id: string) {
     const el = document.getElementById(id);
@@ -469,12 +509,28 @@ function handleUpdateSections() {
                 </div>
 
                 <div style={gridStyle}>
-                  <Field label="Occupancy Groups" placeholder={occupancyGroups(project)} muted />
-                  <Field label="Stories Above Grade" placeholder={String(countAboveStories(project))} muted />
+                  <Field 
+                    label="Occupancy Groups" 
+                    placeholder={occupancyGroups(project)} 
+                    muted 
+                    />
+                  <Field
+                    label="Stories Above Grade"
+                    placeholder={String(countAboveStories(project))}
+                    muted
+                    hint={buildingLimits ? {
+                      text: `(${formatLimit(buildingLimits.maxStories)} stories max.)`,
+                      color: limitColor(countAboveStories(project), buildingLimits.maxStories),
+                    } : undefined}
+                  />
                   <Field
                     label="Total Above-Grade Area"
                     placeholder={totalAboveGradeArea(project).toLocaleString()}
                     muted
+                    hint={buildingLimits ? {
+                      text: `(${formatLimit(buildingLimits.maxAreaFactor)} max.)`,
+                      color: limitColor(totalAboveGradeArea(project), buildingLimits.maxAreaFactor),
+                    } : undefined}
                   />
 
                   <SelectField
@@ -503,6 +559,10 @@ function handleUpdateSections() {
                     label="Building Height"
                     value={project.m1.buildingHeight}
                     onChange={(next) => setProject((p) => ({ ...p, m1: { ...p.m1, buildingHeight: next } }))}
+                    hint={buildingLimits && project.m1.buildingHeight.feet !== null ? {
+                      text: `(${formatLimit(buildingLimits.maxHeightFt)}'-0" max.)`,
+                      color: limitColor(project.m1.buildingHeight.feet, buildingLimits.maxHeightFt),
+                    } : undefined}
                   />
                   <FeetInchesInput
                     label="Highest Floor"
@@ -830,6 +890,20 @@ function totalBelowGradeArea(project: ProjectState): number {
   return project.stories.filter((s) => s.kind === "below").reduce((acc, s) => acc + sumStorySqft(s), 0);
 }
 
+function formatLimit(limit: LimitValue): string {
+  if (limit === null) return "";
+  if (limit === "UL") return "Unlimited";
+  if (limit === "NP") return "Not Permitted";
+  return limit.toLocaleString();
+}
+
+function limitColor(actual: number, limit: LimitValue): string {
+  const result = checkCompliance(actual, limit);
+  if (result === "complies") return "#16a34a";   // green
+  if (result === "fails") return "#dc2626";       // red
+  return "#9ca3af";                               // grey — unknown/insufficient inputs
+}
+
 function occupancyGroups(project: ProjectState): string {
   const set = new Set<string>();
   for (const story of project.stories) {
@@ -853,25 +927,31 @@ function occupancyGroups(project: ProjectState): string {
 
 /* ---- Small components ---- */
 
-function Field(props: {
+function Field(props: { 
   label: string; 
   placeholder: string; 
-  muted?: boolean 
+  muted?: boolean;
+  hint?: { text: string; color: string };
 }) {
-  const { label, placeholder, muted } = props;
+  const { label, placeholder, muted, hint } = props;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
-      <div
-        style={{
-          border: "1px solid #cfcfcf",
-          borderRadius: 10,
-          padding: "6px 10px",
-          fontSize: 13,
-          background: muted ? "#f6f6f6" : "#fff",
-          color: muted ? "#666" : "#111",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
+        {hint && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: hint.color }}>
+            {hint.text}
+          </div>
+        )}
+      </div>
+      <div style={{
+        border: "1px solid #cfcfcf",
+        borderRadius: 10,
+        padding: "6px 10px",
+        fontSize: 13,
+        background: muted ? "#f6f6f6" : "#fff",
+        color: muted ? "#666" : "#111",
+      }}>
         {placeholder}
       </div>
     </div>
@@ -1034,13 +1114,19 @@ function FeetInchesInput(props: {
   label: string;
   value: { feet: number | null; inches: number | null };
   onChange: (v: { feet: number | null; inches: number | null }) => void;
+  hint?: { text: string; color: string };
 }) {
-  const { label, value, onChange } = props;
-
+  const { label, value, onChange, hint } = props;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
-
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
+        {hint && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: hint.color }}>
+            {hint.text}
+          </div>
+        )}
+      </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <NumBox
           placeholder="ft"
