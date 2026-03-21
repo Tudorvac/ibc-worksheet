@@ -12,6 +12,11 @@ import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 
 import {
+  // ...existing...
+  type OccupancyKey,
+} from "@/lib/buildingLimits";
+
+import {
   computeNaRowIds,
   findConflicts,
   getCodeForId,
@@ -52,9 +57,14 @@ export default function Home() {
       fireAlarm: "",
       buildingHeight: { feet: null, inches: null },
       highestFloor: { feet: null, inches: null },
+      personsReceivingCare: null,
     },
     stories: [],
   }));
+
+const hasGroupI = project.stories.some(s =>
+  s.areas.some(a => a.occupancy.startsWith("Group I"))
+);
 
 const buildingLimits = React.useMemo(() => {
   const ct = mapConstructionType(project.m1.constructionType);
@@ -62,10 +72,13 @@ const buildingLimits = React.useMemo(() => {
   const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
 
   // Collect unique occupancy keys from all story areas
-  const occKeys = Array.from(new Set(
+const occKeys = Array.from(new Set(
     project.stories
-      .flatMap(s => s.areas.map(a => mapOccupancyKey(a.occupancy)))
-      .filter((k): k is NonNullable<typeof k> => k !== null)
+      .flatMap(s => s.areas.map(a => {
+        if (a.occupancyCondition) return a.occupancyCondition as OccupancyKey;
+        return mapOccupancyKey(a.occupancy);
+      }))
+      .filter((k): k is OccupancyKey => k !== null)
   ));
 
   if (!ct || occKeys.length === 0) return null;
@@ -98,6 +111,7 @@ const buildingLimits = React.useMemo(() => {
       description: string;
       sqft: number | null;
       mixedUse: string;
+      occupancyCondition: string;
     }>
   ) {
     setProject((prev) => ({
@@ -131,6 +145,7 @@ const buildingLimits = React.useMemo(() => {
               description: "",
               sqft: null,
               mixedUse: "",
+              occupancyCondition: "",
             },
           ],
         };
@@ -210,8 +225,8 @@ const buildingLimits = React.useMemo(() => {
   }
 
   function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4, occ: string) {
-    updateArea(storyId, areaNo, { occupancy: occ, use: "" });
-  }
+  updateArea(storyId, areaNo, { occupancy: occ, use: "", occupancyCondition: "" });
+}
 
   const [dropdownData, setDropdownData] = React.useState<DropdownData>({
     lists: {},
@@ -577,6 +592,37 @@ function handleUpdateSections() {
                     placeholder="Select…"
                     onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, fireAlarm: v } }))}
                   />
+                  
+                  {hasGroupI && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>
+                        Persons Receiving Care
+                      </div>
+                      <input
+                        inputMode="numeric"
+                        placeholder="# of custodial/medical/nursing/restraint"
+                        value={project.m1.personsReceivingCare ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value.trim();
+                          const n = raw === "" ? null : Math.max(0, Math.floor(Number(raw)));
+                          setProject((p) => ({
+                            ...p,
+                            m1: { ...p.m1, personsReceivingCare: n },
+                          }));
+                        }}
+                        style={{
+                          border: "1px solid #cfcfcf",
+                          borderRadius: 10,
+                          padding: "6px 10px",
+                          fontSize: 13,
+                          background: "#fff",
+                          color: "#111",
+                          fontWeight: 500,
+                          width: "100%",
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -672,15 +718,19 @@ function handleUpdateSections() {
                                       />
                                     </td>
 
-                                    <td style={tdStyle}>
-                                      <TableSelect
-                                        value={area.use}
-                                        options={useOptions}
-                                        placeholder={area.occupancy ? "Use…" : "Select occupancy first"}
-                                        disabled={!area.occupancy}
-                                        onChange={(v) => updateArea(story.id, area.areaNo, { use: v })}
-                                      />
-                                    </td>
+                                    {getConditionOptions(area.occupancy).length > 0 && (
+                                      <div style={{ marginTop: 4 }}>
+                                        <TableSelect
+                                          value={getConditionOptions(area.occupancy).find(c => c.tag === area.occupancyCondition)?.label ?? ""}
+                                          options={getConditionOptions(area.occupancy).map(c => c.label)}
+                                          placeholder="Condition…"
+                                          onChange={(v) => {
+                                            const match = getConditionOptions(area.occupancy).find(c => c.label === v);
+                                            updateArea(story.id, area.areaNo, { occupancyCondition: match?.tag ?? "" });
+                                          }}
+                                        />
+                                      </div>
+                                    )}
 
                                     <td style={tdStyle}>
                                       <TableTextInput
@@ -923,6 +973,25 @@ function occupancyGroups(project: ProjectState): string {
       return val.replace(/^Group\s+/i, "");
     })
     .join(", ");
+}
+
+function getConditionOptions(occupancy: string): { tag: string; label: string }[] {
+  if (occupancy === "Group I-1") return [
+    { tag: "I-1-C1", label: "Condition 1" },
+    { tag: "I-1-C2", label: "Condition 2" },
+  ];
+  if (occupancy === "Group I-2") return [
+    { tag: "I-2-C1", label: "Condition 1" },
+    { tag: "I-2-C2", label: "Condition 2" },
+  ];
+  if (occupancy === "Group I-3") return [
+    { tag: "I-3-C1", label: "Condition 1" },
+    { tag: "I-3-C2", label: "Condition 2" },
+    { tag: "I-3-C3", label: "Condition 3" },
+    { tag: "I-3-C4", label: "Condition 4" },
+    { tag: "I-3-C5", label: "Condition 5" },
+  ];
+  return [];
 }
 
 /* ---- Small components ---- */

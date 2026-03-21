@@ -8,6 +8,7 @@ function makeAreaRow(areaNo: 1 | 2 | 3 | 4): AreaRow {
     description: "",
     sqft: null,
     mixedUse: "",
+    occupancyCondition: "",
   };
 }
 

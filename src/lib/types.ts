@@ -36,8 +36,9 @@ export interface AreaRow {
   occupancy: OccupancyCode | "";
   use: UseCode | "";
   description: string;
-  sqft: number | null; // null = not entered
-  mixedUse: MixedUseTag | ""; // only used for areaNo 2-4
+  sqft: number | null;
+  mixedUse: MixedUseTag | "";
+  occupancyCondition: string; // e.g. "I-1-C1", "" if not applicable
 }
 
 export interface Story {
@@ -62,6 +63,7 @@ export interface Module1State {
 
   buildingHeight: FeetInches;
   highestFloor: FeetInches;
+  personsReceivingCare: number | null;
 }
 
 export interface ProjectState {
