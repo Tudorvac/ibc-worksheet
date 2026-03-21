@@ -665,6 +665,7 @@ function handleUpdateSections() {
                         <th style={thStyle}>Story</th>
                         <th style={thStyle}>Area</th>
                         <th style={thStyle}>Occupancy</th>
+                        {hasGroupI && <th style={thStyle}>Condition</th>}
                         <th style={thStyle}>Use</th>
                         <th style={thStyle}>Description</th>
                         <th style={thRightStyle}>Sq. Ft.</th>
@@ -676,7 +677,7 @@ function handleUpdateSections() {
                     <tbody>
                       {project.stories.length === 0 ? (
                         <tr>
-                          <td style={tdStyle} colSpan={9}>
+                          <td style={tdStyle} colSpan={hasGroupI ? 10 : 9}>
                             <em style={{ color: "#555" }}>Increase stories Above or Below Grade using the Module 2 controls above.</em>
                           </td>
                         </tr>
@@ -709,7 +710,7 @@ function handleUpdateSections() {
 
                                     <td style={tdStyle}>{area.areaNo}</td>
 
-                                    <td style={tdStyle}>
+                                    <td style={{ ...tdStyle, minWidth: 140 }}>
                                       <TableSelect
                                         value={area.occupancy}
                                         options={occOptions}
@@ -717,22 +718,35 @@ function handleUpdateSections() {
                                         onChange={(v) => onOccupancyChange(story.id, area.areaNo, v)}
                                       />
                                     </td>
-
-                                    {getConditionOptions(area.occupancy).length > 0 && (
-                                      <div style={{ marginTop: 4 }}>
-                                        <TableSelect
-                                          value={getConditionOptions(area.occupancy).find(c => c.tag === area.occupancyCondition)?.label ?? ""}
-                                          options={getConditionOptions(area.occupancy).map(c => c.label)}
-                                          placeholder="Condition…"
-                                          onChange={(v) => {
-                                            const match = getConditionOptions(area.occupancy).find(c => c.label === v);
-                                            updateArea(story.id, area.areaNo, { occupancyCondition: match?.tag ?? "" });
-                                          }}
-                                        />
-                                      </div>
+                                    {hasGroupI && (
+                                      <td style={{ ...tdStyle, minWidth: 110 }}>
+                                        {getConditionOptions(area.occupancy).length > 0 ? (
+                                          <TableSelect
+                                            value={getConditionOptions(area.occupancy).find(c => c.tag === area.occupancyCondition)?.label ?? ""}
+                                            options={getConditionOptions(area.occupancy).map(c => c.label)}
+                                            placeholder="Condition…"
+                                            onChange={(v) => {
+                                              const match = getConditionOptions(area.occupancy).find(c => c.label === v);
+                                              updateArea(story.id, area.areaNo, { occupancyCondition: match?.tag ?? "" });
+                                            }}
+                                          />
+                                        ) : (
+                                          <span style={{ color: "#ccc" }}>—</span>
+                                        )}
+                                      </td>
                                     )}
 
-                                    <td style={tdStyle}>
+                                    <td style={{ ...tdStyle, minWidth: 120 }}>
+                                      <TableSelect
+                                        value={area.use}
+                                        options={useOptions}
+                                        placeholder={area.occupancy ? "Use…" : "Select occupancy first"}
+                                        disabled={!area.occupancy}
+                                        onChange={(v) => updateArea(story.id, area.areaNo, { use: v })}
+                                      />
+                                    </td>
+
+                                    <td style={{ ...tdStyle, minWidth: 120 }}>
                                       <TableTextInput
                                         value={area.description}
                                         placeholder="Room/Area description..."
@@ -977,19 +991,19 @@ function occupancyGroups(project: ProjectState): string {
 
 function getConditionOptions(occupancy: string): { tag: string; label: string }[] {
   if (occupancy === "Group I-1") return [
-    { tag: "I-1-C1", label: "Condition 1" },
-    { tag: "I-1-C2", label: "Condition 2" },
+    { tag: "I-1-C1", label: "Cond 1" },
+    { tag: "I-1-C2", label: "Cond 2" },
   ];
   if (occupancy === "Group I-2") return [
-    { tag: "I-2-C1", label: "Condition 1" },
-    { tag: "I-2-C2", label: "Condition 2" },
+    { tag: "I-2-C1", label: "Cond 1" },
+    { tag: "I-2-C2", label: "Cond 2" },
   ];
   if (occupancy === "Group I-3") return [
-    { tag: "I-3-C1", label: "Condition 1" },
-    { tag: "I-3-C2", label: "Condition 2" },
-    { tag: "I-3-C3", label: "Condition 3" },
-    { tag: "I-3-C4", label: "Condition 4" },
-    { tag: "I-3-C5", label: "Condition 5" },
+    { tag: "I-3-C1", label: "Cond 1" },
+    { tag: "I-3-C2", label: "Cond 2" },
+    { tag: "I-3-C3", label: "Cond 3" },
+    { tag: "I-3-C4", label: "Cond 4" },
+    { tag: "I-3-C5", label: "Cond 5" },
   ];
   return [];
 }
@@ -1346,7 +1360,7 @@ const tableWrapStyle: React.CSSProperties = {
 const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  minWidth: 980,
+  minWidth: 1200,
 };
 
 const tdRightStyle: React.CSSProperties = {
