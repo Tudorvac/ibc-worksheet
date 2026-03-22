@@ -116,12 +116,9 @@ export const table504_3: HeightTable = (() => {
   const H4_NS: Row12 = [UL,160, 65,55, 65,55, 65,65,65,65, 50,40];
   const H4_S:  Row12 = [UL,180, 85,75, 85,75, 140,100,85,85, 70,60];
 
-  // I-1 Condition 1 and I-3: no IIB restriction
   const I1cond1_NS: Row12 = [UL,160, 65,55, 65,55, 65,65,65,65, 50,40];
   const I1cond1_S:  Row12 = [UL,180, 85,75, 85,75, 180,120,85,85, 70,60];
 
-  // I-1 Condition 2 and I-2: IIB = NP (more restrictive)
-  // I-1 uses the more restrictive Condition 2 row (conservative)
   const I1cond2_NS: Row12 = [UL,160, 65,55, 65,55, 65,65,65,65, 50,40];
   const I1cond2_S:  Row12 = [UL,180, 85,55, 65,55, 65,65,65,65, 50,40];
 
@@ -262,9 +259,7 @@ export const table504_4: StoriesTable = (() => {
       S1: r([4,4, 3,3, 3,3, 3,3,3,3, 3,2]),
       SM: r([4,4, 3,3, 3,3, 3,3,3,3, 3,2]),
     },
-    // I-1 Condition 1 and I-3 share same story limits
     "I-1": {
-      // Conservative: use Condition 2 limits (more restrictive, IIB=NP)
       NS: r([UL,9, 4,3, 4,3, 4,4,4,4, 3,2]),
       S1: r([UL,10, 5,4, 5,4, 10,7,5,5, 4,3]),
       SM: r([UL,10, 5,4, 5,4, 10,7,5,5, 4,3]),
@@ -284,25 +279,25 @@ export const table504_4: StoriesTable = (() => {
       S1: r([UL,6, 4,3, 4,3, 9,6,4,4, 2,2]),
       SM: r([UL,6, 4,3, 4,3, 9,6,4,4, 2,2]),
     },
-"I-1-C1": {
+    "I-1-C1": {
       NS: r([UL,9, 4,3, 4,3, 4,4,4,4, 3,2]),
       S1: r([UL,10, 5,4, 5,4, 10,7,5,5, 4,3]),
       SM: r([UL,10, 5,4, 5,4, 10,7,5,5, 4,3]),
     },
     "I-1-C2": {
-      NS: r([UL,9, 4,NP, 3,NP, 3,3,3,3, 3,2]),
-      S1: r([UL,10, 5,NP, 4,NP, 10,6,4,4, 4,3]),
-      SM: r([UL,10, 5,NP, 4,NP, 10,6,4,4, 4,3]),
+      NS: r([UL,9, 4,3, 4,3, 3,3,3,4, 3,2]),
+      S1: r([UL,10, 5,3, 4,3, 10,6,4,4, 3,2]),
+      SM: r([UL,10, 5,3, 4,3, 10,6,4,4, 3,2]),
     },
     "I-2-C1": {
-      NS: r([UL,4, 2,NP, 1,NP, NP,NP,NP,1, 1,NP]),
-      S1: r([UL,5, 3,NP, 1,NP, 7,5,1,1, 1,NP]),
-      SM: r([UL,5, 3,NP, 1,NP, 7,5,1,1, 1,NP]),
+      NS: r([UL,4, 2,1, 1,NP, NP,NP,NP,1, 1,NP]),
+      S1: r([UL,5, 3,1, 1,NP, 7,5,1,1, 1,NP]),
+      SM: r([UL,5, 3,1, 1,NP, 7,5,1,1, 1,NP]),
     },
     "I-2-C2": {
-      NS: r([UL,4, 2,NP, 1,NP, NP,NP,NP,1, 1,NP]),
-      S1: r([UL,5, 3,NP, 1,NP, 7,5,1,1, 1,NP]),
-      SM: r([UL,5, 3,NP, 1,NP, 7,5,1,1, 1,NP]),
+      NS: r([UL,4, 2,1, 1,NP, NP,NP,NP,1, 1,NP]),
+      S1: r([UL,5, 3,1, 1,NP, 7,5,1,1, 1,NP]),
+      SM: r([UL,5, 3,1, 1,NP, 7,5,1,1, 1,NP]),
     },
     "I-3-C1": {
       NS: r([UL,4, 2,1, 2,1, 2,2,2,2, 2,1]),
