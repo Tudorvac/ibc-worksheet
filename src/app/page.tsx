@@ -10,6 +10,7 @@ import type { ChecklistChapterResponses } from "@/lib/types";
 import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
+import { CollapsiblePanel } from "@/components/CollapsiblePanel";
 
 import {
   // ...existing...
@@ -60,6 +61,25 @@ export default function Home() {
       personsReceivingCare: null,
     },
     stories: [],
+    m3: {
+      specialIndustrialOccupancy: false,
+      oneStoryAircraftHangar: false,
+      unlimitedAreaBuilding: false,
+      specialProvisions: false,
+      rooftopStructures: false,
+      specialIndustrialOccupancyNote: "",
+      oneStoryAircraftHangarNote: "",
+      unlimitedAreaBuildingNote: "",
+      specialProvisionsNote: "",
+      rooftopStructuresNote: "",
+      panel504Collapsed: false,
+      panel505Collapsed: false,
+      panel506Collapsed: false,
+      panel507Collapsed: false,
+      panel508Collapsed: false,
+      panel509Collapsed: false,
+      panel510Collapsed: false,
+    },
   }));
 
 const hasGroupI = project.stories.some(s =>
@@ -400,6 +420,24 @@ function handleUpdateSections() {
 
             <div
               style={{
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: 0.8,
+                color: "#666",
+                marginBottom: 10,
+              }}
+            >
+              CODE ANALYSIS
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>
+                CH 5 Heights & Areas
+              </button>
+            </div>
+
+            <div
+              style={{
                 fontSize: 14,
                 fontWeight: 700,
                 letterSpacing: 0.8,
@@ -624,6 +662,44 @@ function handleUpdateSections() {
                     </div>
                   )}
                 </div>
+
+                {/* Height & Area Modifiers */}
+                <div style={{ marginTop: 14, borderTop: "1px solid #e9e9e9", paddingTop: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 8 }}>
+                    Height & Area Modifiers
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {([
+                      { key: "specialIndustrialOccupancy",  label: "Special Industrial Occupancy (503.1.1) — height and area exemption" },
+                      { key: "oneStoryAircraftHangar",      label: "One-Story Aircraft Hangar (504.1) — height modifiers" },
+                      { key: "unlimitedAreaBuilding",       label: "507 Unlimited Area Building — height and area modifiers" },
+                      { key: "specialProvisions",           label: "510 Special Provisions (504.1.2) — height and area modifiers" },
+                      { key: "rooftopStructures",           label: "1511 Rooftop Structures (504.3) — height modifier" },
+                    ] as { key: keyof typeof project.m3; label: string }[]).map(({ key, label }) => (
+                      <label
+                        key={key}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 13,
+                          color: "#333",
+                          cursor: "pointer",
+                          userSelect: "none",
+                        }}
+                      >
+                        <Checkbox
+                          checked={project.m3[key] as boolean}
+                          onChange={(checked) => setProject((p) => ({
+                            ...p,
+                            m3: { ...p.m3, [key]: checked },
+                          }))}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </section>
             </div>
 
@@ -827,17 +903,287 @@ function handleUpdateSections() {
               </section>
             </div>
 
-            {/* Module 3 placeholder */}
+            {/* Module 3 — Chapter 5 Analysis */}
             <div id="mod3" style={{ scrollMarginTop: 12 }}>
               <section style={cardStyle}>
                 <div style={cardHeaderStyle}>
                   <div>
                     <div style={moduleTagStyle}>MOD 3</div>
-                    <h2 style={cardTitleStyle}>Other Building Information</h2>
+                    <h2 style={cardTitleStyle}>Chapter 5: Height & Area Analysis</h2>
                     <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      Placeholder — Module 3 will be designed after Modules 1–2 are stable.
+                      This module analyzes building heights, areas, and related requirements under IBC Chapter 5.
                     </p>
                   </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <CollapsiblePanel
+                    title="Building Height and Stories (504)"
+                    description="This panel determines the maximum allowable building height and stories."
+                    summarySlot={(() => {
+                      const ct = mapConstructionType(project.m1.constructionType);
+                      const storiesAbove = countAboveStories(project);
+                      const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+                      const occKeys = Array.from(new Set(
+                        project.stories.flatMap(s => s.areas.map(a =>
+                          a.occupancyCondition ? a.occupancyCondition as OccupancyKey : mapOccupancyKey(a.occupancy)
+                        )).filter((k): k is OccupancyKey => k !== null)
+                      ));
+                      const maxH = ct && occKeys.length > 0 ? getMostRestrictiveLimit(occKeys.map(o => getMaxHeightFt(o, ct, spk))) : null;
+                      const maxS = ct && occKeys.length > 0 ? getMostRestrictiveLimit(occKeys.map(o => getMaxStories(o, ct, spk))) : null;
+                      const actualFt = project.m1.buildingHeight.feet;
+                      const actualStories = countAboveStories(project);
+                      const heightColor = actualFt !== null && maxH !== null ? limitColor(actualFt, maxH) : "#9ca3af";
+                      const storiesColor = maxS !== null ? limitColor(actualStories, maxS) : "#9ca3af";
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 12, color: "#555" }}>Max. Height Allowed:</span>
+                            <div style={{
+                              border: `1px solid ${heightColor}`,
+                              borderRadius: 6,
+                              padding: "2px 10px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: heightColor,
+                              minWidth: 70,
+                              textAlign: "center",
+                              background: "#fff",
+                            }}>
+                              {maxH !== null ? formatAllowableHeight(maxH) : "—"}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 12, color: "#555" }}>Max. Stories Allowed:</span>
+                            <div style={{
+                              border: `1px solid ${storiesColor}`,
+                              borderRadius: 6,
+                              padding: "2px 10px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: storiesColor,
+                              minWidth: 70,
+                              textAlign: "center",
+                              background: "#fff",
+                            }}>
+                              {maxS !== null ? formatLimit(maxS) : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    collapsed={project.m3.panel504Collapsed}
+                    onToggle={() => setProject((p) => ({
+                      ...p,
+                      m3: { ...p.m3, panel504Collapsed: !p.m3.panel504Collapsed },
+                    }))}
+                  >
+                    {(() => {
+                      const ct = mapConstructionType(project.m1.constructionType);
+                      const storiesAbove = countAboveStories(project);
+                      const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+                      const actualFt = project.m1.buildingHeight.feet;
+                      const actualStories = countAboveStories(project);
+
+                      // Unique occupancy keys from Module 2
+                      const occEntries = Array.from(new Map(
+                        project.stories.flatMap(s => s.areas.map(a => {
+                          const key = a.occupancyCondition ? a.occupancyCondition as OccupancyKey : mapOccupancyKey(a.occupancy);
+                          return key ? [key, a.occupancy] as [OccupancyKey, string] : null;
+                        }).filter((x): x is [OccupancyKey, string] => x !== null))
+                      ).entries());
+
+                      // Occupied roof rows from Module 2
+                      const occupiedRoofRows = project.stories
+                        .filter(s => s.kind === "above")
+                        .flatMap(s => s.areas
+                          .filter(a => a.mixedUse === "Occupied Roof")
+                          .map(a => ({
+                            storyId: s.id,
+                            occupancy: a.occupancy.replace(/^Group\s+/i, ""),
+                            sqft: a.sqft,
+                          }))
+                        );
+
+                      // Active height modifiers
+            const activeModifiers: { label: string; noteKey: keyof typeof project.m3 }[] = [];
+            if (project.m3.specialIndustrialOccupancy)
+              activeModifiers.push({ label: "Special Industrial Occupancy (503.1.1)", noteKey: "specialIndustrialOccupancyNote" });
+            if (project.m3.oneStoryAircraftHangar)
+              activeModifiers.push({ label: "One-Story Aircraft Hangar (504.1)", noteKey: "oneStoryAircraftHangarNote" });
+            if (project.m3.unlimitedAreaBuilding)
+              activeModifiers.push({ label: "507 Unlimited Area Building", noteKey: "unlimitedAreaBuildingNote" });
+            if (project.m3.specialProvisions)
+              activeModifiers.push({ label: "510 Special Provisions (504.1.2)", noteKey: "specialProvisionsNote" });
+            if (project.m3.rooftopStructures)
+              activeModifiers.push({ label: "1511 Rooftop Structures (504.3)", noteKey: "rooftopStructuresNote" });
+
+                      // Info bar values
+                      const spkLabel = project.m1.sprinklers || "—";
+                      const ctLabel = project.m1.constructionType || "—";
+                      const heightLabel = actualFt !== null ? formatFeetInches(project.m1.buildingHeight) : "—";
+                      const maxH = ct && occEntries.length > 0
+                        ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxHeightFt(o, ct, spk))) : null;
+                      const maxS = ct && occEntries.length > 0
+                        ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxStories(o, ct, spk))) : null;
+                      const heightColor = actualFt !== null && maxH !== null ? limitColor(actualFt, maxH) : "#9ca3af";
+                      const storiesColor = maxS !== null ? limitColor(actualStories, maxS) : "#9ca3af";
+
+                      const mutedText: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
+                      const infoBox = (value: string, color?: string): React.CSSProperties => ({
+                        border: `1px solid ${color ?? "#d6d6d6"}`,
+                        borderRadius: 6,
+                        padding: "2px 10px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: color ?? "#9ca3af",
+                        background: "#fafafa",
+                        minWidth: 60,
+                        textAlign: "center" as const,
+                      });
+
+return (
+  <div style={{ display: "flex", gap: 24 }}>
+    {/* Left column — tables */}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
+          Height and Stories (504.3 & 504.4)
+        </div>
+      </div>
+
+      {/* Per-occupancy table */}
+      {occEntries.length > 0 && ct ? (
+        <table style={{ borderCollapse: "collapse", width: "auto", marginBottom: 16 }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+              <th style={{ ...thStyle, textAlign: "center" }}>Occupancy</th>
+              <th style={{ ...thStyle, textAlign: "center" }}>Allowable Height</th>
+              <th style={{ ...thStyle, textAlign: "center" }}>Allowable Stories</th>
+            </tr>
+          </thead>
+          <tbody>
+            {occEntries.map(([key, rawOcc]) => {
+              const h = getMaxHeightFt(key, ct, spk);
+              const s = getMaxStories(key, ct, spk);
+              const displayOcc = rawOcc.replace(/^Group\s+/i, "");
+              return (
+                <tr key={key} style={{ borderBottom: "1px solid #efefef" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{displayOcc}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{formatAllowableHeight(h)}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{formatLimit(s)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ) : (
+        <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 16 }}>
+          Add occupancies and construction type in Modules 1 & 2 to see results.
+        </div>
+      )}
+
+      {/* Occupiable Roofs */}
+      {occupiedRoofRows.length > 0 && (
+        <>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 8 }}>
+            Occupiable Roofs (503.1.4)
+          </div>
+          <table style={{ borderCollapse: "collapse", width: "auto" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                <th style={{ ...thStyle, textAlign: "center" }}>Story</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>Rooftop Occupancies</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>Sq Ft</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occupiedRoofRows.map((row, idx) => (
+                <tr key={idx} style={{ borderBottom: "1px solid #efefef" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.storyId}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.occupancy}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                    {row.sqft !== null ? row.sqft.toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+
+    {/* Right column — info bar (top) + modifiers (bottom) */}
+    <div style={{ minWidth: 280, maxWidth: 700, display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Info bar — always visible */}
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 10,
+        padding: "10px 12px",
+        background: "#f7f7f7",
+        borderRadius: 10,
+        border: "1px solid #e9e9e9",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={mutedText}>Sprinkler:</span>
+          <div style={infoBox(spkLabel)}>{spkLabel}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={mutedText}>Const. Type:</span>
+          <div style={infoBox(ctLabel)}>{ctLabel}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={mutedText}>Height:</span>
+          <div style={infoBox(heightLabel, heightColor)}>{heightLabel}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={mutedText}>Stories:</span>
+          <div style={infoBox(String(actualStories), storiesColor)}>{actualStories}</div>
+        </div>
+      </div>
+
+      {/* Modifiers — only if any are checked */}
+      {activeModifiers.length > 0 && (
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
+            Height Modifiers:
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {activeModifiers.map((mod) => (
+              <div key={mod.noteKey}>
+                <div style={{ fontSize: 13, color: "#333", marginBottom: 4 }}>
+                  {mod.label}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Notes..."
+                  value={project.m3[mod.noteKey] as string}
+                  onChange={(e) => setProject((p) => ({
+                    ...p,
+                    m3: { ...p.m3, [mod.noteKey]: e.target.value },
+                  }))}
+                  style={{
+                    width: "100%",
+                    border: "1px solid #cfcfcf",
+                    borderRadius: 8,
+                    padding: "5px 8px",
+                    fontSize: 12,
+                    color: "#333",
+                    background: "#fff",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+                    })()}
+                  </CollapsiblePanel>
                 </div>
               </section>
             </div>
@@ -1008,7 +1354,50 @@ function getConditionOptions(occupancy: string): { tag: string; label: string }[
   return [];
 }
 
+function formatAllowableHeight(limit: LimitValue): string {
+  if (limit === null) return "—";
+  if (limit === "UL") return "Unlimited";
+  if (limit === "NP") return "Not Permitted";
+  return `${limit}'-0"`;
+}
+
 /* ---- Small components ---- */
+
+function Checkbox(props: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const { checked, onChange } = props;
+  return (
+    <div
+      onClick={() => onChange(!checked)}
+      style={{
+        width: 15,
+        height: 15,
+        border: "1.5px solid #888",
+        borderRadius: 3,
+        background: checked ? "#111" : "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        cursor: "pointer",
+      }}
+    >
+      {checked && (
+        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+          <path
+            d="M1 3.5L3.5 6L8 1"
+            stroke="#fff"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </div>
+  );
+}
 
 function Field(props: { 
   label: string; 

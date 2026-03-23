@@ -66,7 +66,33 @@ export interface Module1State {
   personsReceivingCare: number | null;
 }
 
+export interface Module3State {
+  // Height/area modifier flags
+  specialIndustrialOccupancy: boolean;
+  oneStoryAircraftHangar: boolean;
+  unlimitedAreaBuilding: boolean;
+  specialProvisions: boolean;
+  rooftopStructures: boolean;
+
+  // Modifier notes
+  specialIndustrialOccupancyNote: string;
+  oneStoryAircraftHangarNote: string;
+  unlimitedAreaBuildingNote: string;
+  specialProvisionsNote: string;
+  rooftopStructuresNote: string;
+
+  // Panel collapse states
+  panel504Collapsed: boolean;
+  panel505Collapsed: boolean;
+  panel506Collapsed: boolean;
+  panel507Collapsed: boolean;
+  panel508Collapsed: boolean;
+  panel509Collapsed: boolean;
+  panel510Collapsed: boolean;
+}
+
 export interface ProjectState {
   m1: Module1State;
-  stories: Story[];         // Module 2 working data
+  m3: Module3State;
+  stories: Story[];
 }
