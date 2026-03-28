@@ -38,7 +38,8 @@ export interface AreaRow {
   description: string;
   sqft: number | null;
   mixedUse: MixedUseTag | "";
-  occupancyCondition: string; // e.g. "I-1-C1", "" if not applicable
+  occupancyCondition: string;
+  openRoomSqft: number | null;
 }
 
 export interface Story {

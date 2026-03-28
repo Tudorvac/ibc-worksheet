@@ -9,6 +9,7 @@ function makeAreaRow(areaNo: 1 | 2 | 3 | 4): AreaRow {
     sqft: null,
     mixedUse: "",
     occupancyCondition: "",
+    openRoomSqft: null,
   };
 }
 

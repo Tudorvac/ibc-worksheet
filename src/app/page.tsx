@@ -11,6 +11,7 @@ import { ProjectState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
+import { saveProject, loadProject } from "@/lib/persistence";
 
 import {
   // ...existing...
@@ -49,9 +50,12 @@ export default function Home() {
   const [pendingNaIds, setPendingNaIds] = React.useState<Set<string> | null>(null);
   const [conflictCodes, setConflictCodes] = React.useState<string[]>([]);
   
-  const [project, setProject] = React.useState<ProjectState>(() => ({
-    m1: {
-      storiesAbove: 0,
+  const [project, setProject] = React.useState<ProjectState>(() => {
+    const saved = loadProject();
+    if (saved) return saved;
+    return ({
+      m1: {
+        storiesAbove: 0,
       storiesBelow: 0,
       constructionType: "",
       sprinklers: "",
@@ -80,7 +84,8 @@ export default function Home() {
       panel509Collapsed: false,
       panel510Collapsed: false,
     },
-  }));
+  });
+  });
 
 const hasGroupI = project.stories.some(s =>
   s.areas.some(a => a.occupancy.startsWith("Group I"))
@@ -132,6 +137,7 @@ const occKeys = Array.from(new Set(
       sqft: number | null;
       mixedUse: string;
       occupancyCondition: string;
+      openRoomSqft: number | null;
     }>
   ) {
     setProject((prev) => ({
@@ -166,6 +172,7 @@ const occKeys = Array.from(new Set(
               sqft: null,
               mixedUse: "",
               occupancyCondition: "",
+              openRoomSqft: null,
             },
           ],
         };
@@ -282,6 +289,10 @@ const occKeys = Array.from(new Set(
       setCh3Responses((prev) => applyNaUpdates(newNaIds, prev));
       setCh3Collapsed(computeCollapsedFromNa(newNaIds));
     }
+  }, [project]);
+
+React.useEffect(() => {
+    saveProject(project);
   }, [project]);
 
 function handleKeepManual() {
@@ -1043,9 +1054,9 @@ function handleUpdateSections() {
                       });
 
 return (
-  <div style={{ display: "flex", gap: 24 }}>
+  <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
     {/* Left column — tables */}
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ minWidth: 0 }}>
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
           Height and Stories (504.3 & 504.4)
@@ -1114,17 +1125,18 @@ return (
     </div>
 
     {/* Right column — info bar (top) + modifiers (bottom) */}
-    <div style={{ minWidth: 280, maxWidth: 700, display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* Info bar — always visible */}
       <div style={{
         display: "flex",
-        flexWrap: "wrap",
+        flexWrap: "nowrap",
         gap: 10,
         padding: "10px 12px",
         background: "#f7f7f7",
         borderRadius: 10,
         border: "1px solid #e9e9e9",
+        overflowX: "auto",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={mutedText}>Sprinkler:</span>
@@ -1182,6 +1194,269 @@ return (
     </div>
   </div>
 );
+                    })()}
+                  </CollapsiblePanel>
+
+                  <CollapsiblePanel
+                    title="Mezzanines and Equipment Platforms (505)"
+                    description="This panel determines the requirements for mezzanines and equipment platforms."
+                    summarySlot={(() => {
+                      const mezzRows = project.stories.flatMap(s =>
+                        s.areas.filter(a => a.mixedUse === "Mezzanine")
+                      );
+                      const epRows = project.stories.flatMap(s =>
+                        s.areas.filter(a => a.mixedUse === "Equipment Platform")
+                      );
+                      if (mezzRows.length === 0 && epRows.length === 0) {
+                        return <div style={{ fontSize: 12, color: "#999" }}>No mezzanines or equipment platforms designated.</div>;
+                      }
+                      const ct = project.m1.constructionType;
+                      const isTypeIorII = ct.startsWith("Type I-") || ct.startsWith("Type II-");
+                      const isNFPA13 = project.m1.sprinklers === "NFPA 13";
+                      const isNFPA13orR = isNFPA13 || project.m1.sprinklers === "NFPA 13R";
+                      const isEmVoice = project.m1.fireAlarm === "Emergency Voice/Alarm";
+                      const isSpecialInd = project.m3.specialIndustrialOccupancy;
+
+                      const getMezzMax = (occ: string) => {
+                        if (isTypeIorII && isSpecialInd) return 2/3;
+                        if (isTypeIorII && isNFPA13 && isEmVoice) return 0.5;
+                        if (occ.startsWith("Group R") && isNFPA13orR) return 0.5;
+                        return 1/3;
+                      };
+
+                      const mezzMeets = mezzRows.every(a => {
+                        if (!a.openRoomSqft || !a.sqft) return true;
+                        return a.sqft / a.openRoomSqft <= getMezzMax(a.occupancy);
+                      });
+                      const epMeets = epRows.every(a => {
+                        if (!a.openRoomSqft || !a.sqft) return true;
+                        return a.sqft / a.openRoomSqft <= 2/3;
+                      });
+
+                      const resultBox = (label: string, meets: boolean, hasRows: boolean) => hasRows ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 12, color: "#555" }}>{label}:</span>
+                          <div style={{
+                            border: `1px solid ${meets ? "#16a34a" : "#dc2626"}`,
+                            borderRadius: 6,
+                            padding: "2px 10px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: meets ? "#16a34a" : "#dc2626",
+                            minWidth: 70,
+                            textAlign: "center" as const,
+                            background: "#fff",
+                          }}>
+                            {meets ? "Meets" : "Exceeds"}
+                          </div>
+                        </div>
+                      ) : null;
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          {resultBox("Mezzanines", mezzMeets, mezzRows.length > 0)}
+                          {resultBox("Equipment Platforms", epMeets, epRows.length > 0)}
+                        </div>
+                      );
+                    })()}
+                    collapsed={project.m3.panel505Collapsed}
+                    onToggle={() => setProject((p) => ({
+                      ...p,
+                      m3: { ...p.m3, panel505Collapsed: !p.m3.panel505Collapsed },
+                    }))}
+                  >
+                    {(() => {
+                      const ct = project.m1.constructionType;
+                      const isTypeIorII = ct.startsWith("Type I-") || ct.startsWith("Type II-");
+                      const isNFPA13 = project.m1.sprinklers === "NFPA 13";
+                      const isNFPA13orR = isNFPA13 || project.m1.sprinklers === "NFPA 13R";
+                      const isEmVoice = project.m1.fireAlarm === "Emergency Voice/Alarm";
+                      const isSpecialInd = project.m3.specialIndustrialOccupancy;
+                      const spkLabel = project.m1.sprinklers || "—";
+                      const ctLabel = project.m1.constructionType || "—";
+                      const fireAlarmLabel = project.m1.fireAlarm || "—";
+
+                      const getMezzMax = (occ: string): number => {
+                        if (isTypeIorII && isSpecialInd) return 2/3;
+                        if (isTypeIorII && isNFPA13 && isEmVoice) return 0.5;
+                        if (occ.startsWith("Group R") && isNFPA13orR) return 0.5;
+                        return 1/3;
+                      };
+
+                      const formatPct = (n: number) => `${(n * 100).toFixed(1)}%`;
+
+                      // Collect mezzanine and equipment platform rows
+                      const mezzRows = project.stories.flatMap(s =>
+                        s.areas
+                          .filter(a => a.mixedUse === "Mezzanine")
+                          .map(a => ({ story: s, area: a }))
+                      );
+                      const epRows = project.stories.flatMap(s =>
+                        s.areas
+                          .filter(a => a.mixedUse === "Equipment Platform")
+                          .map(a => ({ story: s, area: a }))
+                      );
+
+                      // Check if any story-area has both mezzanine and equipment platform
+                      const storyAreaIds = new Set(mezzRows.map(r => `${r.story.id}`));
+                      const hasCombined = epRows.some(r => storyAreaIds.has(r.story.id));
+
+                      // Auto-notes
+                      const autoNotes: string[] = [];
+                      if (mezzRows.length > 0) {
+                        autoNotes.push("Total mezzanine area shall not exceed one-third of the room's open floor area. (505.2.1)");
+                        if (isTypeIorII && isSpecialInd)
+                          autoNotes.push("Total mezzanine area shall not exceed two-thirds of the room's open floor area in Type I or II, Special Industrial Occupancies. (505.2.1, Exc 1)");
+                        if (isTypeIorII && isNFPA13 && isEmVoice)
+                          autoNotes.push("Total mezzanine area shall not exceed one-half of the room's open floor area in buildings with NFPA 13 sprinklers and Emergency Voice/Alarm systems. (505.2.1, Exc 2)");
+                        if (mezzRows.some(r => r.area.occupancy.startsWith("Group R")) && isNFPA13orR)
+                          autoNotes.push("Total mezzanine area shall not exceed one-half of the room's open floor area in Group R dwelling units with NFPA 13 or NFPA 13R sprinklers. (505.2.1, Exc 3)");
+                      }
+                      if (epRows.length > 0)
+                        autoNotes.push("Total equipment platform area shall not exceed two-thirds of the room's open floor area. (505.3.1)");
+                      if (hasCombined)
+                        autoNotes.push("Total combined mezzanine and equipment platform area shall not exceed two-thirds of the room's open floor area. The mezzanine portion cannot exceed the max allowed. (505.2.1.1)");
+
+                      const mutedText: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
+                      const infoBox = (value: string): React.CSSProperties => ({
+                        border: "1px solid #d6d6d6",
+                        borderRadius: 6,
+                        padding: "2px 10px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#9ca3af",
+                        background: "#fafafa",
+                        minWidth: 60,
+                        textAlign: "center" as const,
+                      });
+
+                      const allRows = [...mezzRows, ...epRows];
+                      if (allRows.length === 0) {
+                        return (
+                          <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                            No mezzanines or equipment platforms designated in Module 2.
+                          </div>
+                        );
+                      }
+
+                      return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                            {/* Row 1 — title/notes (40%) + info bar (60%) */}
+                            <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+                              {/* Left: sub-section title + auto-notes */}
+                              <div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+                                  Mezzanines (505.2) and Equipment Platforms (505.3)
+                                </div>
+                                {autoNotes.length > 0 && (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                    {autoNotes.map((note, i) => (
+                                      <div key={i} style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>
+                                        {note}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right: info bar */}
+                              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                <div style={{
+                                  display: "flex",
+                                  flexWrap: "nowrap",
+                                  gap: 10,
+                                  padding: "10px 12px",
+                                  background: "#f7f7f7",
+                                  borderRadius: 10,
+                                  border: "1px solid #e9e9e9",
+                                  overflowX: "auto",
+                                }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={mutedText}>Sprinkler:</span>
+                                    <div style={infoBox(spkLabel)}>{spkLabel}</div>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={mutedText}>Const. Type:</span>
+                                    <div style={infoBox(ctLabel)}>{ctLabel}</div>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={mutedText}>Fire Alarm:</span>
+                                    <div style={infoBox(fireAlarmLabel)}>{fireAlarmLabel}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Row 2 — full width table */}
+                            <div>
+                              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Story-Area</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Occupancy</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Type</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Open Room (Sq Ft)</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Mezzanine (Sq Ft)</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Equip. Platform (Sq Ft)</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Total %</th>
+                                  <th style={{ ...thStyle, textAlign: "center" }}>Max % Allowed</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {allRows.map(({ story, area }, idx) => {
+                                  const isMezz = area.mixedUse === "Mezzanine";
+                                  const maxPct = isMezz ? getMezzMax(area.occupancy) : 2/3;
+                                  const sqft = area.sqft ?? 0;
+                                  const openRoom = area.openRoomSqft;
+                                  const totalPct = openRoom && openRoom > 0 ? sqft / openRoom : null;
+                                  const meets = totalPct !== null ? totalPct <= maxPct : true;
+                                  const pctColor = totalPct !== null ? (meets ? "#16a34a" : "#dc2626") : "#9ca3af";
+                                  const displayOcc = area.occupancy.replace(/^Group\s+/i, "");
+                                  const storyArea = `${story.id}-${area.areaNo}`;
+
+                                  return (
+                                    <tr key={idx} style={{ borderBottom: "1px solid #efefef" }}>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{storyArea}</td>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{displayOcc || "—"}</td>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{area.mixedUse}</td>
+                                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                                        <TableNumberInput
+                                          value={area.openRoomSqft}
+                                          placeholder="Sq Ft"
+                                          onChange={(v) => updateArea(story.id, area.areaNo, { openRoomSqft: v })}
+                                        />
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                                        {isMezz ? (sqft > 0 ? sqft.toLocaleString() : "—") : "—"}
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                                        {!isMezz ? (sqft > 0 ? sqft.toLocaleString() : "—") : "—"}
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                                        <div style={{
+                                          display: "inline-block",
+                                          padding: "2px 8px",
+                                          borderRadius: 6,
+                                          border: `1px solid ${pctColor}`,
+                                          color: pctColor,
+                                          fontWeight: 700,
+                                          fontSize: 12,
+                                          background: "#fff",
+                                        }}>
+                                          {totalPct !== null ? formatPct(totalPct) : "—"}
+                                        </div>
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                                        {formatPct(maxPct)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            </div>
+                          </div>
+                      );
                     })()}
                   </CollapsiblePanel>
                 </div>
