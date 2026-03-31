@@ -67,6 +67,19 @@ export interface Module1State {
   personsReceivingCare: number | null;
 }
 
+export interface FrontageSegment {
+  perimeterLength: number | null;
+  frontageWidth: number | null;
+}
+
+export interface FrontageState {
+  north: FrontageSegment;
+  east: FrontageSegment;
+  south: FrontageSegment;
+  west: FrontageSegment;
+  useInterpolated: boolean;
+}
+
 export interface Module3State {
   // Height/area modifier flags
   specialIndustrialOccupancy: boolean;
@@ -81,6 +94,9 @@ export interface Module3State {
   unlimitedAreaBuildingNote: string;
   specialProvisionsNote: string;
   rooftopStructuresNote: string;
+
+  // Frontage increase inputs (506.3)
+  frontage: FrontageState;
 
   // Panel collapse states
   panel504Collapsed: boolean;

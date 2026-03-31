@@ -7,7 +7,7 @@ import { ch4Rows } from "@/content/checklists/ch4";
 import { ch5Rows } from "@/content/checklists/ch5";
 import { ch6Rows } from "@/content/checklists/ch6";
 import type { ChecklistChapterResponses } from "@/lib/types";
-import { ProjectState } from "@/lib/types";
+import { ProjectState, FrontageState } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
@@ -76,6 +76,13 @@ export default function Home() {
       unlimitedAreaBuildingNote: "",
       specialProvisionsNote: "",
       rooftopStructuresNote: "",
+      frontage: {
+        north: { perimeterLength: null, frontageWidth: null },
+        east:  { perimeterLength: null, frontageWidth: null },
+        south: { perimeterLength: null, frontageWidth: null },
+        west:  { perimeterLength: null, frontageWidth: null },
+        useInterpolated: false,
+      },
       panel504Collapsed: false,
       panel505Collapsed: false,
       panel506Collapsed: false,
@@ -570,6 +577,29 @@ function handleUpdateSections() {
                       This module contains general building information.
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Reset the entire worksheet? All inputs will be cleared.")) {
+                        localStorage.removeItem("ibc-worksheet-project-v1");
+                        window.location.reload();
+                      }
+                    }}
+                    style={{
+                      border: "1px solid #cfcfcf",
+                      borderRadius: 10,
+                      padding: "6px 14px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      background: "#fafafa",
+                      color: "#333",
+                      cursor: "pointer",
+                      lineHeight: 1.3,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Reset<br />Worksheet
+                  </button>
                 </div>
 
                 <div style={gridStyle}>
@@ -1459,6 +1489,476 @@ return (
                       );
                     })()}
                   </CollapsiblePanel>
+
+                  <CollapsiblePanel
+                    title="Building Area (506)"
+                    description="This panel determines the maximum allowable building areas."
+                    summarySlot={(() => {
+                      const calc = computeArea506(project);
+                      const storyColor = calc.storyComplies === "complies" ? "#16a34a" : calc.storyComplies === "fails" ? "#dc2626" : "#9ca3af";
+                      const totalColor = calc.totalComplies === "complies" ? "#16a34a" : calc.totalComplies === "fails" ? "#dc2626" : "#9ca3af";
+                      const fmtArea = (v: number | "UL" | "NP" | null) =>
+                        v === null ? "—" : v === "UL" ? "Unlimited" : v === "NP" ? "Not Permitted" : Math.round(v as number).toLocaleString();
+                      const summaryBox = (label: string, value: string, color: string) => (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 12, color: "#555" }}>{label}:</span>
+                          <div style={{
+                            border: `1px solid ${color}`,
+                            borderRadius: 6,
+                            padding: "2px 10px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color,
+                            minWidth: 80,
+                            textAlign: "center" as const,
+                            background: "#fff",
+                          }}>{value}</div>
+                        </div>
+                      );
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          {summaryBox("Story Allowable Area", fmtArea(calc.aaStory), storyColor)}
+                          {summaryBox("Total Allowable Area", fmtArea(calc.aaTotal), totalColor)}
+                        </div>
+                      );
+                    })()}
+                    collapsed={project.m3.panel506Collapsed}
+                    onToggle={() => setProject((p) => ({
+                      ...p,
+                      m3: { ...p.m3, panel506Collapsed: !p.m3.panel506Collapsed },
+                    }))}
+                  >
+                    {(() => {
+                      const calc = computeArea506(project);
+                      const fr = computeFrontage(project.m3.frontage);
+                      const spkLabel = project.m1.sprinklers || "—";
+                      const ctLabel = project.m1.constructionType || "—";
+                      const storiesLabel = String(calc.storiesAbove);
+                      const fmtArea = (v: number | "UL" | "NP" | null) =>
+                        v === null ? "—" : v === "UL" ? "Unlimited" : v === "NP" ? "Not Permitted" : Math.round(v as number).toLocaleString();
+                      const storyColor = calc.storyComplies === "complies" ? "#16a34a" : calc.storyComplies === "fails" ? "#dc2626" : "#9ca3af";
+                      const totalColor = calc.totalComplies === "complies" ? "#16a34a" : calc.totalComplies === "fails" ? "#dc2626" : "#9ca3af";
+
+                      const mutedText: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
+                      const infoBox = (value: string, color?: string): React.CSSProperties => ({
+                        border: `1px solid ${color ?? "#d6d6d6"}`,
+                        borderRadius: 6,
+                        padding: "2px 10px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: color ?? "#9ca3af",
+                        background: "#fafafa",
+                        minWidth: 60,
+                        textAlign: "center" as const,
+                      });
+
+                      // Active area modifiers
+                      const activeModifiers: { label: string; noteKey: keyof typeof project.m3 }[] = [];
+                      if (project.m3.specialIndustrialOccupancy)
+                        activeModifiers.push({ label: "Special Industrial Occupancy (503.1.1)", noteKey: "specialIndustrialOccupancyNote" });
+                      if (project.m3.unlimitedAreaBuilding)
+                        activeModifiers.push({ label: "507 Unlimited Area Building", noteKey: "unlimitedAreaBuildingNote" });
+                      if (project.m3.specialProvisions)
+                        activeModifiers.push({ label: "510 Special Provisions (504.1.2)", noteKey: "specialProvisionsNote" });
+
+                      const segInput = (dir: keyof Omit<FrontageState, "useInterpolated">, label: string) => {
+                        const seg = project.m3.frontage[dir];
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                <div style={{ fontSize: 11, color: "#9ca3af" }}>Perimeter Length</div>
+                                <TableNumberInput
+                                  value={seg.perimeterLength}
+                                  placeholder="ft"
+                                  onChange={(v) => setProject((p) => ({
+                                    ...p,
+                                    m3: {
+                                      ...p.m3,
+                                      frontage: {
+                                        ...p.m3.frontage,
+                                        [dir]: { ...p.m3.frontage[dir], perimeterLength: v },
+                                      },
+                                    },
+                                  }))}
+                                />
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                <div style={{ fontSize: 11, color: "#9ca3af" }}>Frontage Width</div>
+                                <TableNumberInput
+                                  value={seg.frontageWidth}
+                                  placeholder="ft"
+                                  onChange={(v) => setProject((p) => ({
+                                    ...p,
+                                    m3: {
+                                      ...p.m3,
+                                      frontage: {
+                                        ...p.m3.frontage,
+                                        [dir]: { ...p.m3.frontage[dir], frontageWidth: v },
+                                      },
+                                    },
+                                  }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      };
+
+                      return (
+  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+    {/* Row 1 — 40/60 grid: occupancy table | info bar + modifiers */}
+    <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+
+      {/* Left — occupancy table */}
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+          Allowable Area (506.2)
+        </div>
+        {calc.occRows.length > 0 ? (
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                <th style={{ ...thStyle, textAlign: "center" }}>Occupancy</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>Tabular Area (At)</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>NS Area</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calc.occRows
+                .slice()
+                .sort((a, b) => {
+                  if (a.at === "NP") return -1;
+                  if (b.at === "NP") return 1;
+                  if (a.at === "UL") return 1;
+                  if (b.at === "UL") return -1;
+                  if (typeof a.at === "number" && typeof b.at === "number") return a.at - b.at;
+                  return 0;
+                })
+                .map((row) => {
+                  const isMostRestrictive = row.key === calc.mostRestrictiveKey;
+                  return (
+                    <tr key={row.key} style={{
+                      borderBottom: "1px solid #efefef",
+                      background: isMostRestrictive ? "#fef9c3" : "transparent",
+                    }}>
+                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: isMostRestrictive ? 700 : 400 }}>{row.displayName}</td>
+                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: isMostRestrictive ? 700 : 400 }}>{fmtArea(row.at)}</td>
+                      <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: isMostRestrictive ? 700 : 400 }}>{fmtArea(row.ns)}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ fontSize: 13, color: "#9ca3af" }}>
+            Add occupancies in Module 2 to see results.
+          </div>
+        )}
+      </div>
+
+      {/* Right — actual areas + info bar + modifiers */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Actual building areas — top row */}
+        <div style={{
+          display: "flex",
+          flexWrap: "nowrap",
+          gap: 10,
+          padding: "10px 12px",
+          background: "#f7f7f7",
+          borderRadius: 10,
+          border: "1px solid #e9e9e9",
+          overflowX: "auto",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Basement Area:</span>
+            <div style={{ ...infoBox(calc.totalBelow > 0 ? calc.totalBelow.toLocaleString() : "—", calc.basementColor), color: calc.basementColor, border: `1px solid ${calc.basementColor}` }}>
+              {calc.totalBelow > 0 ? calc.totalBelow.toLocaleString() : "—"}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Largest Story:</span>
+            <div style={{ ...infoBox(calc.largestStory > 0 ? calc.largestStory.toLocaleString() : "—", storyColor), color: storyColor, border: `1px solid ${storyColor}` }}>
+              {calc.largestStory > 0 ? calc.largestStory.toLocaleString() : "—"}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Total Above-Grade:</span>
+            <div style={{ ...infoBox(calc.totalAbove > 0 ? calc.totalAbove.toLocaleString() : "—", totalColor), color: totalColor, border: `1px solid ${totalColor}` }}>
+              {calc.totalAbove > 0 ? calc.totalAbove.toLocaleString() : "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* Info bar */}
+        <div style={{
+          display: "flex",
+          flexWrap: "nowrap",
+          gap: 10,
+          padding: "10px 12px",
+          background: "#f7f7f7",
+          borderRadius: 10,
+          border: "1px solid #e9e9e9",
+          overflowX: "auto",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Sprinkler:</span>
+            <div style={infoBox(spkLabel)}>{spkLabel}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Const. Type:</span>
+            <div style={infoBox(ctLabel)}>{ctLabel}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={mutedText}>Stories:</span>
+            <div style={infoBox(storiesLabel)}>{storiesLabel}</div>
+          </div>
+        </div>
+
+        {activeModifiers.length > 0 && (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
+              Area Modifiers:
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {activeModifiers.map((mod) => (
+                <div key={mod.noteKey}>
+                  <div style={{ fontSize: 13, color: "#333", marginBottom: 4 }}>{mod.label}</div>
+                  <input
+                    type="text"
+                    placeholder="Notes..."
+                    value={project.m3[mod.noteKey] as string}
+                    onChange={(e) => setProject((p) => ({
+                      ...p,
+                      m3: { ...p.m3, [mod.noteKey]: e.target.value },
+                    }))}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cfcfcf",
+                      borderRadius: 8,
+                      padding: "5px 8px",
+                      fontSize: 12,
+                      color: "#333",
+                      background: "#fff",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Row 2 — Allowable Area Determination — table format */}
+    <div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+        Allowable Area Determination
+      </div>
+      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+            <th style={{ ...thStyle, textAlign: "center" }}>Tabular Area (At)</th>
+            <th style={{ ...thStyle, textAlign: "center", width: 24 }}>+</th>
+            <th style={{ ...thStyle, textAlign: "center" }}>(NS) Factor</th>
+            <th style={{ ...thStyle, textAlign: "center", width: 24 }}>×</th>
+            <th style={{ ...thStyle, textAlign: "center" }}>Frontage (If)</th>
+            <th style={{ ...thStyle, textAlign: "center", width: 24 }}>=</th>
+            <th style={{ ...thStyle, textAlign: "center" }}>Allowable Area (Aa)</th>
+            <th style={{ ...thStyle, textAlign: "center", borderLeft: "1px solid #d0d0d0" }}>
+              {calc.storiesAbove > 3 ? "Story Factor (Sa)" : "Stories"}
+            </th>
+            <th style={{ ...thStyle, textAlign: "center", borderLeft: "1px solid #d0d0d0" }}>Total Allowable Area</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style={{ borderBottom: "1px solid #efefef" }}>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtArea(calc.mostRestrictiveAt)}</td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#555" }}>+</td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtArea(calc.mostRestrictiveNs)}</td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#555" }}>×</td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{calc.If.toFixed(2)}</td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#555" }}>=</td>
+            <td style={{ ...tdStyle, textAlign: "center" }}>
+              <div style={{
+                display: "inline-block",
+                border: `1px solid ${storyColor}`,
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: storyColor,
+                background: "#fff",
+              }}>
+                {fmtArea(calc.aaStory)}
+              </div>
+            </td>
+            <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", borderLeft: "1px solid #efefef" }}>
+              {calc.storiesAbove > 3 ? calc.Sa : calc.storiesAbove}
+            </td>
+            <td style={{ ...tdStyle, textAlign: "center", borderLeft: "1px solid #efefef" }}>
+              <div style={{
+                display: "inline-block",
+                border: `1px solid ${totalColor}`,
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: totalColor,
+                background: "#fff",
+              }}>
+                {fmtArea(calc.aaTotal)}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {/* Row 3 — Frontage Increase — 40/60 grid */}
+    <div style={{ borderTop: "1px solid #e9e9e9", paddingTop: 20 }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 12 }}>
+        Frontage Increase (506.3)
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+
+        {/* Left — direction inputs */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {(["north", "east", "south", "west"] as const).map(dir => {
+            const seg = project.m3.frontage[dir];
+            return (
+              <div key={dir} style={{
+                border: "1px solid #e9e9e9",
+                borderRadius: 10,
+                padding: "8px 12px",
+                background: "#fafafa",
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#555", marginBottom: 6 }}>
+                  Facing {dir.charAt(0).toUpperCase() + dir.slice(1)}
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>Perimeter Length (ft)</div>
+                    <TableNumberInput
+                      value={seg.perimeterLength}
+                      placeholder="ft"
+                      onChange={(v) => setProject((p) => ({
+                        ...p,
+                        m3: {
+                          ...p.m3,
+                          frontage: {
+                            ...p.m3.frontage,
+                            [dir]: { ...p.m3.frontage[dir], perimeterLength: v },
+                          },
+                        },
+                      }))}
+                    />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>Frontage Width (ft)</div>
+                    <TableNumberInput
+                      value={seg.frontageWidth}
+                      placeholder="ft"
+                      onChange={(v) => setProject((p) => ({
+                        ...p,
+                        m3: {
+                          ...p.m3,
+                          frontage: {
+                            ...p.m3.frontage,
+                            [dir]: { ...p.m3.frontage[dir], frontageWidth: v },
+                          },
+                        },
+                      }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right — computed results */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            ["Frontage Increase (If)", calc.If.toFixed(2), "#3b82f6"],
+          ].map(([label, value, color]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "#555", minWidth: 200 }}>{label}:</span>
+              <div style={{
+                border: `1px solid ${color}`,
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                color,
+                minWidth: 80,
+                textAlign: "center" as const,
+                background: "#fff",
+              }}>{value}</div>
+            </div>
+          ))}
+
+          {/* Interpolated value with inline checkbox */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "#555", minWidth: 200 }}>Interpolated Value:</span>
+            <div style={{
+              border: "1px solid #9ca3af",
+              borderRadius: 6,
+              padding: "2px 10px",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#9ca3af",
+              minWidth: 80,
+              textAlign: "center" as const,
+              background: "#fff",
+            }}>{fr.interpolatedIf.toFixed(3)}</div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#333", cursor: "pointer" }}>
+              <Checkbox
+                checked={project.m3.frontage.useInterpolated}
+                onChange={(checked) => setProject((p) => ({
+                  ...p,
+                  m3: {
+                    ...p.m3,
+                    frontage: { ...p.m3.frontage, useInterpolated: checked },
+                  },
+                }))}
+              />
+              Use interpolated value
+            </label>
+          </div>
+
+          {[
+            ["Tabular Increase Factor", fr.tabularIf.toFixed(2), "#9ca3af"],
+            ["Min. Qualifying Distance", fr.minQualifyingDist !== null ? `${fr.minQualifyingDist}'-0"` : "—", "#9ca3af"],
+            ["Qualifying Perimeter %", fr.totalPerimeter > 0 ? `${fr.qualifyingPct.toFixed(1)}%` : "—", "#9ca3af"],
+            [`Total Frontage (≥20'-0")`, fr.totalQualifying > 0 ? `${fr.totalQualifying.toLocaleString()}'-0"` : "—", "#9ca3af"],
+            ["Total Perimeter", fr.totalPerimeter > 0 ? `${fr.totalPerimeter.toLocaleString()}'-0"` : "—", "#9ca3af"],
+          ].map(([label, value, color]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "#555", minWidth: 200 }}>{label}:</span>
+              <div style={{
+                border: `1px solid ${color}`,
+                borderRadius: 6,
+                padding: "2px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                color,
+                minWidth: 80,
+                textAlign: "center" as const,
+                background: "#fff",
+              }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+                    })()}
+                  </CollapsiblePanel>
                 </div>
               </section>
             </div>
@@ -1567,12 +2067,343 @@ function sumStorySqft(story: { areas: { sqft: number | null }[] }): number {
   return story.areas.reduce((acc, a) => acc + (a.sqft ?? 0), 0);
 }
 
+const EXCLUDED_MIXED_USES = ["Mezzanine", "Equipment Platform", "Occupied Roof", "Penthouse"];
+
+function sumStorySqftFiltered(story: { areas: { sqft: number | null; mixedUse: string }[] }): number {
+  return story.areas
+    .filter(a => !EXCLUDED_MIXED_USES.includes(a.mixedUse))
+    .reduce((acc, a) => acc + (a.sqft ?? 0), 0);
+}
+
 function totalAboveGradeArea(project: ProjectState): number {
-  return project.stories.filter((s) => s.kind === "above").reduce((acc, s) => acc + sumStorySqft(s), 0);
+  return project.stories
+    .filter((s) => s.kind === "above")
+    .reduce((acc, s) => acc + sumStorySqftFiltered(s), 0);
 }
 
 function totalBelowGradeArea(project: ProjectState): number {
-  return project.stories.filter((s) => s.kind === "below").reduce((acc, s) => acc + sumStorySqft(s), 0);
+  return project.stories
+    .filter((s) => s.kind === "below")
+    .reduce((acc, s) => acc + sumStorySqftFiltered(s), 0);
+}
+
+function largestStoryArea(project: ProjectState): number {
+  return Math.max(0, ...project.stories
+    .filter(s => s.kind === "above")
+    .map(s => sumStorySqftFiltered(s))
+  );
+}
+
+// Table 506.3.3 — Frontage Increase Factor
+// Rows: qualifying % brackets [0-25, 25-50, 50-75, 75-100]
+// Cols: min distance brackets [20-25, 25-30, 30+]
+const FRONTAGE_TABLE = [
+  [0,    0,    0   ],  // 0-25%
+  [0.17, 0.21, 0.25],  // 25-50%
+  [0.33, 0.42, 0.50],  // 50-75%
+  [0.50, 0.63, 0.75],  // 75-100%
+];
+
+function getFrontageRowIndex(pct: number): number {
+  if (pct < 25) return 0;
+  if (pct < 50) return 1;
+  if (pct < 75) return 2;
+  return 3;
+}
+
+function getFrontageColIndex(minDist: number): number {
+  if (minDist < 25) return 0;
+  if (minDist < 30) return 1;
+  return 2;
+}
+
+function interpolateFrontage(pct: number, minDist: number): number {
+  // Clamp inputs
+  const clampedPct = Math.min(100, Math.max(0, pct));
+  const clampedDist = Math.max(20, minDist);
+
+  // % breakpoints and distance breakpoints for interpolation
+  const pctBreaks = [0, 25, 50, 75, 100];
+  const distBreaks = [20, 25, 30, 999];
+
+  // Full table including 0% row and extrapolated 100% boundary
+  const fullTable = [
+    [0,    0,    0   ],  // 0%
+    [0,    0,    0   ],  // 25%  (row 0 → same as 0%)
+    [0.17, 0.21, 0.25],  // 25%
+    [0.33, 0.42, 0.50],  // 50%
+    [0.50, 0.63, 0.75],  // 75%
+    [0.50, 0.63, 0.75],  // 100% (same as 75+ row per table)
+  ];
+
+  const pctBreaksFull = [0, 25, 25, 50, 75, 100];
+
+  // Find surrounding % rows
+  let r0 = 0;
+  for (let i = 0; i < pctBreaksFull.length - 1; i++) {
+    if (clampedPct >= pctBreaksFull[i] && clampedPct <= pctBreaksFull[i + 1]) {
+      r0 = i;
+      break;
+    }
+  }
+  const r1 = Math.min(r0 + 1, fullTable.length - 1);
+  const pctT = pctBreaksFull[r0] === pctBreaksFull[r1]
+    ? 0
+    : (clampedPct - pctBreaksFull[r0]) / (pctBreaksFull[r1] - pctBreaksFull[r0]);
+
+  // Find surrounding distance cols
+  const c0 = clampedDist < 25 ? 0 : clampedDist < 30 ? 1 : 2;
+  const c1 = Math.min(c0 + 1, 2);
+  const distBreakLow = [20, 25, 30][c0];
+  const distBreakHigh = [25, 30, 999][c0];
+  const distT = distBreakHigh === 999
+    ? 0
+    : (clampedDist - distBreakLow) / (distBreakHigh - distBreakLow);
+
+  // Bilinear interpolation
+  const v00 = fullTable[r0][c0];
+  const v01 = fullTable[r0][c1];
+  const v10 = fullTable[r1][c0];
+  const v11 = fullTable[r1][c1];
+
+  return v00 * (1 - pctT) * (1 - distT)
+       + v01 * (1 - pctT) * distT
+       + v10 * pctT * (1 - distT)
+       + v11 * pctT * distT;
+}
+
+interface FrontageResult {
+  totalPerimeter: number;
+  totalQualifying: number;
+  qualifyingPct: number;
+  minQualifyingDist: number | null;
+  tabularIf: number;
+  interpolatedIf: number;
+  qualifies: boolean; // >= 25% perimeter threshold
+}
+
+function computeFrontage(frontage: FrontageState): FrontageResult {
+  const directions = [frontage.north, frontage.east, frontage.south, frontage.west];
+
+  let totalPerimeter = 0;
+  let totalQualifying = 0;
+  let minQualifyingDist: number | null = null;
+
+  for (const seg of directions) {
+    const len = seg.perimeterLength ?? 0;
+    const width = seg.frontageWidth ?? 0;
+    if (len > 0) {
+      totalPerimeter += len;
+      if (width >= 20) {
+        totalQualifying += len;
+        if (minQualifyingDist === null || width < minQualifyingDist) {
+          minQualifyingDist = width;
+        }
+      }
+    }
+  }
+
+  const qualifyingPct = totalPerimeter > 0
+    ? (totalQualifying / totalPerimeter) * 100
+    : 0;
+
+  const qualifies = qualifyingPct >= 25 && minQualifyingDist !== null;
+
+  const tabularIf = qualifies && minQualifyingDist !== null
+    ? FRONTAGE_TABLE[getFrontageRowIndex(qualifyingPct)][getFrontageColIndex(minQualifyingDist)]
+    : 0;
+
+  const interpolatedIf = qualifies && minQualifyingDist !== null
+    ? Math.round(interpolateFrontage(qualifyingPct, minQualifyingDist) * 1000) / 1000
+    : 0;
+
+  return {
+    totalPerimeter,
+    totalQualifying,
+    qualifyingPct,
+    minQualifyingDist,
+    tabularIf,
+    interpolatedIf,
+    qualifies,
+  };
+}
+
+interface AreaCalcResult {
+  // Occupancy table data
+  occRows: {
+    key: OccupancyKey;
+    displayName: string;
+    at: LimitValue;
+    ns: LimitValue;
+  }[];
+  mostRestrictiveKey: OccupancyKey | null;
+  mostRestrictiveAt: LimitValue;
+  mostRestrictiveNs: LimitValue;
+
+  // Equation inputs
+  If: number;
+  Sa: number;
+  storiesAbove: number;
+
+  // Results
+  aaStory: number | "UL" | "NP" | null;  // Eq 5-1 per story
+  aaTotal: number | "UL" | "NP" | null;  // total allowable
+  largestStory: number;
+  totalAbove: number;
+  totalBelow: number;
+  basementComplies: boolean | null;
+
+  // Compliance
+  storyComplies: "complies" | "fails" | "unknown";
+  totalComplies: "complies" | "fails" | "unknown";
+  basementColor: string;
+}
+
+function computeArea506(project: ProjectState): AreaCalcResult {
+  const ct = mapConstructionType(project.m1.constructionType);
+  const storiesAbove = countAboveStories(project);
+  const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+  const frontageResult = computeFrontage(project.m3.frontage);
+  const If = project.m3.frontage.useInterpolated
+    ? frontageResult.interpolatedIf
+    : frontageResult.tabularIf;
+
+  // Sa determination
+  const Sa = (spk === "SM" || spk === "S1" || spk === "S13R") ? 4 : 3;
+
+  // Collect unique occupancy keys — exclude separated occupancies for now
+  const rawOccEntries = Array.from(new Map(
+    project.stories.flatMap(s => s.areas
+      .filter(a => !EXCLUDED_MIXED_USES.includes(a.mixedUse))
+      .filter(a => a.mixedUse !== "Separated Use")
+      .map(a => {
+        const key = a.occupancyCondition
+          ? a.occupancyCondition as OccupancyKey
+          : mapOccupancyKey(a.occupancy);
+        return key ? [key, a.occupancy] as [OccupancyKey, string] : null;
+      })
+      .filter((x): x is [OccupancyKey, string] => x !== null)
+    )
+  ).entries());
+
+  // Build occupancy rows with At and NS values
+  const occRows = ct ? rawOccEntries.map(([key, rawOcc]) => ({
+    key,
+    displayName: rawOcc.replace(/^Group\s+/i, ""),
+    at: getAreaFactor(key, ct, spk),
+    ns: getAreaFactor(key, ct, "NS"),
+  })) : [];
+
+  // Find most restrictive — lowest numeric At (NP < numbers < UL)
+  let mostRestrictiveKey: OccupancyKey | null = null;
+  let mostRestrictiveAt: LimitValue = null;
+  let mostRestrictiveNs: LimitValue = null;
+
+  for (const row of occRows) {
+    if (mostRestrictiveKey === null) {
+      mostRestrictiveKey = row.key;
+      mostRestrictiveAt = row.at;
+      mostRestrictiveNs = row.ns;
+      continue;
+    }
+    // NP is most restrictive
+    if (row.at === "NP") {
+      mostRestrictiveKey = row.key;
+      mostRestrictiveAt = row.at;
+      mostRestrictiveNs = row.ns;
+      continue;
+    }
+    if (mostRestrictiveAt === "NP") continue;
+    // UL is least restrictive
+    if (row.at === "UL") continue;
+    if (mostRestrictiveAt === "UL") {
+      mostRestrictiveKey = row.key;
+      mostRestrictiveAt = row.at;
+      mostRestrictiveNs = row.ns;
+      continue;
+    }
+    // Both numeric — lower wins
+    if (typeof row.at === "number" && typeof mostRestrictiveAt === "number") {
+      if (row.at < mostRestrictiveAt) {
+        mostRestrictiveKey = row.key;
+        mostRestrictiveAt = row.at;
+        mostRestrictiveNs = row.ns;
+      }
+    }
+  }
+
+  // Compute allowable areas
+  const totalAbove = totalAboveGradeArea(project);
+  const totalBelow = totalBelowGradeArea(project);
+  const largest = largestStoryArea(project);
+
+  let aaStory: number | "UL" | "NP" | null = null;
+  let aaTotal: number | "UL" | "NP" | null = null;
+
+  if (mostRestrictiveAt !== null && mostRestrictiveNs !== null) {
+    if (mostRestrictiveAt === "NP") {
+      aaStory = "NP";
+      aaTotal = "NP";
+    } else if (mostRestrictiveAt === "UL") {
+      aaStory = "UL";
+      aaTotal = "UL";
+    } else if (typeof mostRestrictiveAt === "number" && typeof mostRestrictiveNs === "number") {
+      // Eq 5-1
+      aaStory = mostRestrictiveAt + (mostRestrictiveNs * If);
+
+      // Eq 5-2 or simple multiplication
+      if (storiesAbove > 3) {
+        aaTotal = aaStory * Sa;
+      } else {
+        aaTotal = aaStory * storiesAbove;
+      }
+    }
+  }
+
+  // Basement compliance — compare totalBelow vs aaStory
+  let basementComplies: boolean | null = null;
+  if (aaStory !== null && totalBelow > 0) {
+    if (aaStory === "UL") basementComplies = true;
+    else if (aaStory === "NP") basementComplies = false;
+    else if (typeof aaStory === "number") basementComplies = totalBelow <= aaStory;
+  }
+
+  const basementColor = basementComplies === null
+    ? "#9ca3af"
+    : basementComplies ? "#16a34a" : "#dc2626";
+
+  // Story compliance
+  const storyComplies: "complies" | "fails" | "unknown" =
+    aaStory === null ? "unknown"
+    : aaStory === "NP" ? "fails"
+    : aaStory === "UL" ? "complies"
+    : largest <= aaStory ? "complies" : "fails";
+
+  // Total compliance
+  const totalComplies: "complies" | "fails" | "unknown" =
+    aaTotal === null ? "unknown"
+    : aaTotal === "NP" ? "fails"
+    : aaTotal === "UL" ? "complies"
+    : totalAbove <= aaTotal ? "complies" : "fails";
+
+  return {
+    occRows,
+    mostRestrictiveKey,
+    mostRestrictiveAt,
+    mostRestrictiveNs,
+    If,
+    Sa,
+    storiesAbove,
+    aaStory,
+    aaTotal,
+    largestStory: largest,
+    totalAbove,
+    totalBelow,
+    basementComplies,
+    storyComplies,
+    totalComplies,
+    basementColor,
+  };
 }
 
 function formatLimit(limit: LimitValue): string {
