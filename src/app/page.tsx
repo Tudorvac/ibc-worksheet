@@ -38,7 +38,21 @@ import {
   type LimitValue,
 } from "@/lib/buildingLimits";
 
+function useWindowWidth(): number {
+  const [width, setWidth] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+  React.useEffect(() => {
+    function handle() { setWidth(window.innerWidth); }
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+  return width;
+}
+
 export default function Home() {
+  const windowWidth = useWindowWidth();
+  const [navExpanded, setNavExpanded] = React.useState(true);
   const [ch3Responses, setCh3Responses] = React.useState<ChecklistChapterResponses>({});
   const [ch4Responses, setCh4Responses] = React.useState<ChecklistChapterResponses>({});
   const [ch5Responses, setCh5Responses] = React.useState<ChecklistChapterResponses>({});
@@ -49,59 +63,69 @@ export default function Home() {
   const [ch6Collapsed, setCh6Collapsed] = React.useState<Set<string>>(new Set());
   const [pendingNaIds, setPendingNaIds] = React.useState<Set<string> | null>(null);
   const [conflictCodes, setConflictCodes] = React.useState<string[]>([]);
-  
+  const [ch3PanelCollapsed, setCh3PanelCollapsed] = React.useState(true);
+  const [ch4PanelCollapsed, setCh4PanelCollapsed] = React.useState(true);
+  const [ch5PanelCollapsed, setCh5PanelCollapsed] = React.useState(true);
+  const [ch6PanelCollapsed, setCh6PanelCollapsed] = React.useState(true);
+
   const [project, setProject] = React.useState<ProjectState>(() => {
     const saved = loadProject();
     if (saved) return saved;
     return ({
       m1: {
         storiesAbove: 0,
-      storiesBelow: 0,
-      constructionType: "",
-      sprinklers: "",
-      fireAlarm: "",
-      buildingHeight: { feet: null, inches: null },
-      highestFloor: { feet: null, inches: null },
-      personsReceivingCare: null,
-    },
-    stories: [],
-    m3: {
-      specialIndustrialOccupancy: false,
-      oneStoryAircraftHangar: false,
-      unlimitedAreaBuilding: false,
-      specialProvisions: false,
-      rooftopStructures: false,
-      specialIndustrialOccupancyNote: "",
-      oneStoryAircraftHangarNote: "",
-      unlimitedAreaBuildingNote: "",
-      specialProvisionsNote: "",
-      rooftopStructuresNote: "",
-      frontage: {
-        north: { perimeterLength: null, frontageWidth: null },
-        east:  { perimeterLength: null, frontageWidth: null },
-        south: { perimeterLength: null, frontageWidth: null },
-        west:  { perimeterLength: null, frontageWidth: null },
-        useInterpolated: false,
+        storiesBelow: 0,
+        constructionType: "",
+        sprinklers: "",
+        fireAlarm: "",
+        buildingHeight: { feet: null, inches: null },
+        highestFloor: { feet: null, inches: null },
+        personsReceivingCare: null,
       },
-      panel504Collapsed: false,
-      panel505Collapsed: false,
-      panel506Collapsed: false,
-      panel507Collapsed: false,
-      panel508Collapsed: false,
-      panel509Collapsed: false,
-      panel510Collapsed: false,
-    },
-  });
+      stories: [],
+      m3: {
+        specialIndustrialOccupancy: false,
+        oneStoryAircraftHangar: false,
+        unlimitedAreaBuilding: false,
+        specialProvisions: false,
+        rooftopStructures: false,
+        specialIndustrialOccupancyNote: "",
+        oneStoryAircraftHangarNote: "",
+        unlimitedAreaBuildingNote: "",
+        specialProvisionsNote: "",
+        rooftopStructuresNote: "",
+        frontage: {
+          north: { perimeterLength: null, frontageWidth: null },
+          east:  { perimeterLength: null, frontageWidth: null },
+          south: { perimeterLength: null, frontageWidth: null },
+          west:  { perimeterLength: null, frontageWidth: null },
+          useInterpolated: false,
+        },
+        panel504Collapsed: true,
+        panel505Collapsed: true,
+        panel506Collapsed: true,
+        panel507Collapsed: true,
+        panel508Collapsed: true,
+        panel509Collapsed: true,
+        panel510Collapsed: true,
+      },
+    });
   });
 
-const hasGroupI = project.stories.some(s =>
-  s.areas.some(a => a.occupancy.startsWith("Group I"))
-);
+  // Auto-collapse nav below 900px
+  React.useEffect(() => {
+    if (windowWidth < 900) setNavExpanded(false);
+    else setNavExpanded(true);
+  }, [windowWidth]);
 
-const buildingLimits = React.useMemo(() => {
-  const ct = mapConstructionType(project.m1.constructionType);
-  const storiesAbove = countAboveStories(project);
-  const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+  const hasGroupI = project.stories.some(s =>
+    s.areas.some(a => a.occupancy.startsWith("Group I"))
+  );
+
+  const buildingLimits = React.useMemo(() => {
+    const ct = mapConstructionType(project.m1.constructionType);
+    const storiesAbove = countAboveStories(project);
+    const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
 
   // Collect unique occupancy keys from all story areas
 const occKeys = Array.from(new Set(
@@ -383,7 +407,7 @@ function handleUpdateSections() {
             </div>
           )}
 
-      <div style={{ minWidth: 1000, padding: "12px 120px", boxSizing: "border-box" }}>
+      <div style={{ minWidth: 800, padding: "0px 24px", boxSizing: "border-box" }}>
         <header style={{ marginBottom: 16 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#989898" }}>2024 IBC Review Worksheet</h1>
           <p style={{ margin: "6px 0 0", color: "#989898" }}>
@@ -391,177 +415,145 @@ function handleUpdateSections() {
           </p>
         </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: `${navExpanded ? 200 : 48}px 1fr`, gap: 14, transition: "grid-template-columns 200ms ease" }}>
           {/* LEFT NAV (sticky jump menu) */}
-          <nav
-            style={{
-              position: "sticky",
-              top: 12,
-              alignSelf: "start",
+          {/* Nav panel wrapper */}
+          <div style={{
+            position: "sticky",
+            top: 12,
+            alignSelf: "start",
+            zIndex: 10,
+          }}>
 
-              // add these:
-              maxHeight: "calc(100vh - 24px)",
-              overflowY: "auto",
-              height: "fit-content",
-
-              border: "1px solid #d6d6d6",
-              borderRadius: 14,
-              padding: 8,
-              background: "#fff",
-            }}
-          >
-            <div
+            <nav
               style={{
-                fontSize: 14,
-                fontWeight: 800,
-                letterSpacing: 0.8,
-                color: "#666",
-                marginBottom: 10,
+                width: navExpanded ? 200 : 48,
+                minWidth: navExpanded ? 200 : 48,
+                maxHeight: "calc(100vh - 24px)",
+                overflowY: "auto",
+                overflowX: "hidden",
+                border: "1px solid #d6d6d6",
+                borderRadius: 14,
+                padding: navExpanded ? "12px 12px" : "12px 0",
+                background: "#fff",
+                transition: "width 200ms ease, min-width 200ms ease, padding 200ms ease",
               }}
             >
-              Information Modules
-            </div>
+              {navExpanded ? (
+                // Expanded — full text
+                <>
+                  {/* Hamburger — top of expanded nav */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setNavExpanded(v => !v)}
+                      style={{
+                        width: 32, height: 32,
+                        border: "1px solid #d6d6d6",
+                        borderRadius: 8,
+                        background: "#fff",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                      <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                      <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "#666", marginBottom: 10 }}>
+                    INFORMATION
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod1")}>MOD 1 — Building Summary</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod2")}>MOD 2 — Heights & Areas</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>MOD 3 — Ch. 5 Analysis</button>
+                  </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod1")}>
-                Building Summary
-              </button>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod2")}>
-                Building Heights & Areas
-              </button>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>
-                Other Building Information
-              </button>
-            </div>
+                  <div style={{ height: 12 }} />
 
-            <div style={{ height: 14 }} />
-
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 800,
-                letterSpacing: 0.8,
-                color: "#666",
-                marginBottom: 10,
-              }}
-            >
-              CODE ANALYSIS
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>
-                CH 5 Heights & Areas
-              </button>
-            </div>
-
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: 0.8,
-                color: "#666",
-                marginBottom: 10,
-              }}
-            >
-              Checklist Modules
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch3")}>
-                CH 3 Occupancy & Use
-              </button>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch4")}>
-                CH 4 Special Occupancy & Use
-              </button>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch5")}>
-                CH 5 Heights & Areas
-              </button>
-              <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch6")}>
-                CH 6 Types of Construction
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 7 Fire-rated Assemblies
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 8 Interior Finishes
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 9 Fire Protection Systems
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 10 Means of Egress
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 11 Accessibility
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 12 Interior Environment
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 13 Energy Efficiency
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 14 Exterior Walls
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 15 Roof Assemblies & Structures
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 16 Structural Design
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 17 Special Inspections
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 18 Soils & Foundations
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 19 Concrete
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 20 Aluminum
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 21 Masonry
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 22 Steel
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 23 Wood
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 24 Glass & Glazing
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 25 Gypsum Panels & Plaster
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 26 Plastic
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 27 Electrical
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 28 Mechanical Systems
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 29 Plumbing Systems
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 30 Elevators & Conveyors
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 31 Special Construction
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 32 ROW Encroachments
-              </button>
-              <button type="button" style={navBtnDisabledStyle} disabled>
-                CH 33 Construction Safeguards
-              </button>
-            </div>
-          </nav>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, color: "#666", marginBottom: 10 }}>
+                    CHECKLISTS
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch3")}>CH 3 — Occupancy & Use</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch4")}>CH 4 — Special Occupancy</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch5")}>CH 5 — Heights & Areas</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("ch6")}>CH 6 — Construction Type</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 7 — Fire-rated Assemblies</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 8 — Interior Finishes</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 9 — Fire Protection</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 10 — Means of Egress</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 11 — Accessibility</button>
+                  </div>
+                </>
+              ) : (
+                // Collapsed — icon labels only
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  {/* Hamburger — top of collapsed nav */}
+                  <button
+                    type="button"
+                    onClick={() => setNavExpanded(v => !v)}
+                    style={{
+                      width: 36, height: 36,
+                      border: "1px solid #d6d6d6",
+                      borderRadius: 8,
+                      background: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      marginBottom: 2,
+                    }}
+                  >
+                    <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                    <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                    <div style={{ width: 14, height: 1.5, background: "#555", borderRadius: 2 }} />
+                  </button>
+                  {[
+                    { label: "MOD 1", id: "mod1" },
+                    { label: "MOD 2", id: "mod2" },
+                    { label: "MOD 3", id: "mod3" },
+                    { label: "CH 3",  id: "ch3"  },
+                    { label: "CH 4",  id: "ch4"  },
+                    { label: "CH 5",  id: "ch5"  },
+                    { label: "CH 6",  id: "ch6"  },
+                  ].map(({ label, id }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => scrollToId(id)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        border: "1px solid #d6d6d6",
+                        borderRadius: 8,
+                        background: "#fafafa",
+                        cursor: "pointer",
+                        fontSize: 9,
+                        fontWeight: 800,
+                        color: "#555",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        letterSpacing: 0.3,
+                      }}
+                      title={label}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </nav>
+          </div>
 
           {/* RIGHT COLUMN (all panels stacked) */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1084,7 +1076,7 @@ function handleUpdateSections() {
                       });
 
 return (
-  <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+  <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 40%) 1fr", gap: 24 }}>
     {/* Left column — tables */}
     <div style={{ minWidth: 0 }}>
       <div style={{ marginBottom: 10 }}>
@@ -1372,7 +1364,7 @@ return (
                       return (
                           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                             {/* Row 1 — title/notes (40%) + info bar (60%) */}
-                            <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 40%) 1fr", gap: 24 }}>
                               {/* Left: sub-section title + auto-notes */}
                               <div>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
@@ -1610,7 +1602,7 @@ return (
   <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
     {/* Row 1 — 40/60 grid: occupancy table | info bar + modifiers */}
-    <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 40%) 1fr", gap: 24 }}>
 
       {/* Left — occupancy table */}
       <div>
@@ -1823,7 +1815,7 @@ return (
       <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 12 }}>
         Frontage Increase (506.3)
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "40% 60%", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 40%) 1fr", gap: 24 }}>
 
         {/* Left — direction inputs */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1965,16 +1957,12 @@ return (
 
             {/* Chapter 3 checklist panel */}
             <div id="ch3" style={{ scrollMarginTop: 12 }}>
-              <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
-                  <div>
-                    <div style={moduleTagStyle}>CH 3</div>
-                    <h2 style={cardTitleStyle}>Chapter 3: Occupancy Classification and Use</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      This chapter controls the classification of all buildings and structures as to occupancy and use.
-                    </p>
-                  </div>
-                </div>
+              <CollapsiblePanel
+                title="Chapter 3: Occupancy Classification and Use"
+                description="This chapter controls the classification of all buildings and structures as to occupancy and use."
+                collapsed={ch3PanelCollapsed}
+                onToggle={() => setCh3PanelCollapsed(v => !v)}
+              >
                 <ChapterChecklist
                   rows={ch3Rows}
                   responses={ch3Responses}
@@ -1982,69 +1970,56 @@ return (
                   externalCollapsed={ch3Collapsed}
                   setExternalCollapsed={setCh3Collapsed}
                 />
-              </section>
+              </CollapsiblePanel>
             </div>
 
             {/* Chapter 4 checklist panel */}
             <div id="ch4" style={{ scrollMarginTop: 12 }}>
-              <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
-                  <div>
-                    <div style={moduleTagStyle}>CH 4</div>
-                    <h2 style={cardTitleStyle}>Chapter 4: Special Detailed Requirements Based on Occupancy and Use</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      This chapter provides detailed criteria for special uses and occupancies.
-                    </p>
-                  </div>
-                </div>
+              <CollapsiblePanel
+                title="Chapter 4: Special Detailed Requirements Based on Occupancy and Use"
+                description="This chapter provides detailed criteria for special uses and occupancies."
+                collapsed={ch4PanelCollapsed}
+                onToggle={() => setCh4PanelCollapsed(v => !v)}
+              >
                 <ChapterChecklist
                   rows={ch4Rows}
                   responses={ch4Responses}
                   setResponses={setCh4Responses}
                 />
-              </section>
+              </CollapsiblePanel>
             </div>
 
             {/* Chapter 5 checklist panel */}
             <div id="ch5" style={{ scrollMarginTop: 12 }}>
-              <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
-                  <div>
-                    <div style={moduleTagStyle}>CH 5</div>
-                    <h2 style={cardTitleStyle}>Chapter 5: General Building Heights and Areas</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      This chapter establishes the limits to which a building can be built.
-                    </p>
-                  </div>
-                </div>            
+              <CollapsiblePanel
+                title="Chapter 5: General Building Heights and Areas"
+                description="This chapter establishes the limits to which a building can be built."
+                collapsed={ch5PanelCollapsed}
+                onToggle={() => setCh5PanelCollapsed(v => !v)}
+              >
                 <ChapterChecklist
                   rows={ch5Rows}
                   responses={ch5Responses}
                   setResponses={setCh5Responses}
                 />
-              </section>
+              </CollapsiblePanel>
             </div>
 
 
             {/* Chapter 6 checklist panel */}
             <div id="ch6" style={{ scrollMarginTop: 12 }}>
-              <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
-                  <div>
-                    <div style={moduleTagStyle}>CH 6</div>
-                    <h2 style={cardTitleStyle}>Chapter 6: Types of Construction</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      This Chapter establishes five types of construction in which each building must be categorized.
-                    </p>
-                  </div>
-                </div>
+              <CollapsiblePanel
+                title="Chapter 6: Types of Construction"
+                description="This Chapter establishes five types of construction in which each building must be categorized."
+                collapsed={ch6PanelCollapsed}
+                onToggle={() => setCh6PanelCollapsed(v => !v)}
+              >
                 <ChapterChecklist
                   rows={ch6Rows}
                   responses={ch6Responses}
                   setResponses={setCh6Responses}
                 />
-
-              </section>
+              </CollapsiblePanel>
             </div>
           </div>
         </div>
