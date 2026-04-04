@@ -415,7 +415,7 @@ function handleUpdateSections() {
           </p>
         </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: `${navExpanded ? 200 : 48}px 1fr`, gap: 14, transition: "grid-template-columns 200ms ease" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `${navExpanded ? 200 : 48}px 1fr`, gap: 54, transition: "grid-template-columns 200ms ease" }}>
           {/* LEFT NAV (sticky jump menu) */}
           {/* Nav panel wrapper */}
           <div style={{
@@ -427,8 +427,8 @@ function handleUpdateSections() {
 
             <nav
               style={{
-                width: navExpanded ? 200 : 48,
-                minWidth: navExpanded ? 200 : 48,
+                width: navExpanded ? 238 : 56,
+                minWidth: navExpanded ? 238 : 56,
                 maxHeight: "calc(100vh - 24px)",
                 overflowY: "auto",
                 overflowX: "hidden",
@@ -471,7 +471,7 @@ function handleUpdateSections() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod1")}>MOD 1 — Building Summary</button>
                     <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod2")}>MOD 2 — Heights & Areas</button>
-                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>MOD 3 — Ch. 5 Analysis</button>
+                    <button type="button" style={navBtnStyle} onClick={() => scrollToId("mod3")}>MOD 3 — Building Analysis</button>
                   </div>
 
                   <div style={{ height: 12 }} />
@@ -489,6 +489,28 @@ function handleUpdateSections() {
                     <button type="button" style={navBtnDisabledStyle} disabled>CH 9 — Fire Protection</button>
                     <button type="button" style={navBtnDisabledStyle} disabled>CH 10 — Means of Egress</button>
                     <button type="button" style={navBtnDisabledStyle} disabled>CH 11 — Accessibility</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 12 — Interior Environment</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 13 — Energy Efficiency</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 14 — Exterior Walls</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 15 — Roof Assemblies</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 16 — Structural Design</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 17 — Special Inspections</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 18 — Soils and Foundations</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 19 — Concrete</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 20 — Aluminum</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 21 — Masonry</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 22 — Steel</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 23 — Wood</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 24 — Glass and Glazing</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 25 — Gypsum and Plaster</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 26 — Plastic</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 27 — Electrical</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 28 — Mechanical Systems</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 29 — Plumbing Systems</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 30 — Elevator Systems</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 31 — Special Construction</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 32 — ROW Encroachments</button>
+                    <button type="button" style={navBtnDisabledStyle} disabled>CH 33 — Construction Safeguards</button>
                   </div>
                 </>
               ) : (
@@ -530,7 +552,7 @@ function handleUpdateSections() {
                       type="button"
                       onClick={() => scrollToId(id)}
                       style={{
-                        width: 36,
+                        width: 46,
                         height: 36,
                         border: "1px solid #d6d6d6",
                         borderRadius: 8,
@@ -1951,6 +1973,324 @@ return (
 );
                     })()}
                   </CollapsiblePanel>
+
+                  <CollapsiblePanel
+                    title="Mixed Use and Occupancy (508)"
+                    description="This panel determines the classification of mixed occupancies."
+                    summarySlot={(() => {
+                      const calc = compute508(project);
+                      const summaryBox = (label: string, meets: boolean | null) => (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 12, color: "#555" }}>{label}:</span>
+                          <div style={{
+                            border: `1px solid ${meets === null ? "#9ca3af" : meets ? "#16a34a" : "#dc2626"}`,
+                            borderRadius: 6,
+                            padding: "2px 10px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: meets === null ? "#9ca3af" : meets ? "#16a34a" : "#dc2626",
+                            minWidth: 70,
+                            textAlign: "center" as const,
+                            background: "#fff",
+                          }}>
+                            {meets === null ? "—" : meets ? "Meets" : "Exceeds"}
+                          </div>
+                        </div>
+                      );
+                      const hasSeparated = calc.separatedStories.some(s => s.rows.some(r => r.type === "Separated"));
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          {summaryBox("Accessory Occupancies", calc.accessoryRows.length > 0 ? calc.accessoryMeets : null)}
+                          {summaryBox("Nonseparated Occupancies", calc.nonseparatedRows.length > 0 ? (calc.nonsepHeightComplies === "complies" && calc.nonsepStoriesComplies === "complies") : null)}
+                          {summaryBox("Separated Occupancies", hasSeparated ? calc.separatedMeets : null)}
+                        </div>
+                      );
+                    })()}
+                    collapsed={project.m3.panel508Collapsed}
+                    onToggle={() => setProject((p) => ({
+                      ...p,
+                      m3: { ...p.m3, panel508Collapsed: !p.m3.panel508Collapsed },
+                    }))}
+                  >
+                    {(() => {
+                      const calc = compute508(project);
+                      const ct = mapConstructionType(project.m1.constructionType);
+                      const storiesAbove = countAboveStories(project);
+                      const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+                      const spkLabel = project.m1.sprinklers || "—";
+                      const ctLabel = project.m1.constructionType || "—";
+                      const storiesLabel = String(storiesAbove);
+                      const fmtArea = (v: LimitValue) =>
+                        v === null ? "—" : v === "UL" ? "Unlimited" : v === "NP" ? "Not Permitted" : Math.round(v as number).toLocaleString();
+                      const fmtHeight = (v: LimitValue) =>
+                        v === null ? "—" : v === "UL" ? "Unlimited" : v === "NP" ? "Not Permitted" : `${v}'-0"`;
+                      const complianceColor = (c: "complies" | "fails" | "unknown") =>
+                        c === "complies" ? "#16a34a" : c === "fails" ? "#dc2626" : "#9ca3af";
+                      const mutedText: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
+                      const infoBox = (value: string, color?: string): React.CSSProperties => ({
+                        border: `1px solid ${color ?? "#d6d6d6"}`,
+                        borderRadius: 6,
+                        padding: "2px 10px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: color ?? "#9ca3af",
+                        background: "#fafafa",
+                        minWidth: 60,
+                        textAlign: "center" as const,
+                      });
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+                          {/* Info bar */}
+                          <div style={{
+                            display: "flex",
+                            flexWrap: "nowrap",
+                            gap: 10,
+                            padding: "10px 12px",
+                            background: "#f7f7f7",
+                            borderRadius: 10,
+                            border: "1px solid #e9e9e9",
+                            overflowX: "auto",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={mutedText}>Sprinkler:</span>
+                              <div style={infoBox(spkLabel)}>{spkLabel}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={mutedText}>Const. Type:</span>
+                              <div style={infoBox(ctLabel)}>{ctLabel}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={mutedText}>Stories:</span>
+                              <div style={infoBox(storiesLabel)}>{storiesLabel}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={mutedText}>Building Height:</span>
+                              <div style={infoBox(
+                                project.m1.buildingHeight.feet !== null ? formatFeetInches(project.m1.buildingHeight) : "—",
+                                complianceColor(calc.nonsepHeightComplies)
+                              )}>
+                                {project.m1.buildingHeight.feet !== null ? formatFeetInches(project.m1.buildingHeight) : "—"}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={mutedText}>Total Above-Grade:</span>
+                              <div style={infoBox(
+                                totalAboveGradeArea(project).toLocaleString(),
+                                complianceColor(calc.nonsepAreaComplies)
+                              )}>
+                                {totalAboveGradeArea(project).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Table 1 — Accessory Occupancies */}
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+                              Accessory Occupancies (508.2)
+                            </div>
+                            {calc.accessoryRows.length > 0 ? (
+                              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                                <thead>
+                                  <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Story</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Occupancy</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Total Sq Ft</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Story Area</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>NS Area</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>% Story</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>% NS Area</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {calc.accessoryRows.map((row, idx) => {
+                                    const storyColor = row.storyComplies ? "#16a34a" : "#dc2626";
+                                    const nsColor = row.nsComplies ? "#16a34a" : "#dc2626";
+                                    return (
+                                      <tr key={idx} style={{ borderBottom: "1px solid #efefef" }}>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.storyId}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.occupancy}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.sqft.toLocaleString()}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.storyArea.toLocaleString()}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtArea(row.nsArea)}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                                          <div style={{
+                                            display: "inline-block",
+                                            border: `1px solid ${storyColor}`,
+                                            borderRadius: 6,
+                                            padding: "2px 8px",
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: storyColor,
+                                            background: "#fff",
+                                          }}>
+                                            {row.pctStory !== null ? `${row.pctStory.toFixed(2)}%` : "—"}
+                                          </div>
+                                        </td>
+                                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                                          <div style={{
+                                            display: "inline-block",
+                                            border: `1px solid ${nsColor}`,
+                                            borderRadius: 6,
+                                            padding: "2px 8px",
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: nsColor,
+                                            background: "#fff",
+                                          }}>
+                                            {row.pctNS !== null ? `${row.pctNS.toFixed(1)}%` : "—"}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                                No accessory occupancies designated in Module 2.
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Divider */}
+                          <div style={{ borderTop: "1px solid #e9e9e9" }} />
+
+                          {/* Table 2 — Nonseparated Occupancies */}
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+                              Nonseparated Occupancies (508.3)
+                            </div>
+                            {calc.nonseparatedRows.length > 0 ? (
+                              <>
+                                {/* Compliance bar */}
+                                <div style={{
+                                  display: "flex",
+                                  gap: 16,
+                                  marginBottom: 12,
+                                  padding: "8px 12px",
+                                  background: "#f7f7f7",
+                                  borderRadius: 10,
+                                  border: "1px solid #e9e9e9",
+                                  flexWrap: "wrap",
+                                }}>
+                                  {[
+                                    ["Max Height", fmtHeight(calc.mostRestrictiveNonsep?.maxHeight ?? null), complianceColor(calc.nonsepHeightComplies)],
+                                    ["Max Stories", fmtArea(calc.mostRestrictiveNonsep?.maxStories ?? null), complianceColor(calc.nonsepStoriesComplies)],
+                                    ["Max Area (At)", fmtArea(calc.mostRestrictiveNonsep?.at ?? null), complianceColor(calc.nonsepAreaComplies)],
+                                  ].map(([label, value, color]) => (
+                                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={mutedText}>{label}:</span>
+                                      <div style={{ ...infoBox(value, color), color, border: `1px solid ${color}` }}>{value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                                  <thead>
+                                    <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                                      <th style={{ ...thStyle, textAlign: "center" }}>Occupancy</th>
+                                      <th style={{ ...thStyle, textAlign: "center" }}>Tabular Height</th>
+                                      <th style={{ ...thStyle, textAlign: "center" }}>Tabular Stories</th>
+                                      <th style={{ ...thStyle, textAlign: "center" }}>Tabular Area (At)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {calc.nonseparatedRows.map((row, idx) => (
+                                      <tr key={idx} style={{
+                                        borderBottom: "1px solid #efefef",
+                                        background: row.isMostRestrictive ? "#fef9c3" : "transparent",
+                                      }}>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: row.isMostRestrictive ? 700 : 400 }}>{row.displayName}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: row.isMostRestrictive ? 700 : 400 }}>{fmtHeight(row.maxHeight)}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: row.isMostRestrictive ? 700 : 400 }}>{fmtArea(row.maxStories)}</td>
+                                        <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: row.isMostRestrictive ? 700 : 400 }}>{fmtArea(row.at)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </>
+                            ) : (
+                              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                                No nonseparated occupancies designated in Module 2.
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Divider */}
+                          <div style={{ borderTop: "1px solid #e9e9e9" }} />
+
+                          {/* Table 3 — Separated Occupancies */}
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+                              Separated Occupancies (508.4)
+                            </div>
+                            {calc.separatedStories.some(s => s.rows.some(r => r.type === "Separated")) ? (
+                              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                                <thead>
+                                  <tr style={{ borderBottom: "1px solid #d0d0d0" }}>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Story</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Max Stories</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Occupancies</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Mixed Use</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Sq Ft</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Max Area (story)</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Max Height</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Ratio</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {calc.separatedStories.map((story) => (
+                                    <React.Fragment key={story.storyId}>
+                                      {story.rows.map((row, idx) => (
+                                        <tr key={idx} style={{ borderBottom: "1px solid #efefef" }}>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{idx === 0 ? row.storyId : ""}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtArea(row.maxStories)}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.occupancies}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.type}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{row.sqft.toLocaleString()}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtArea(row.allowableArea)}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>{fmtHeight(row.maxHeight)}</td>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                                            {row.ratio !== null ? row.ratio.toFixed(3) : "—"}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      {/* Story total row */}
+                                      <tr style={{ borderBottom: "2px solid #d0d0d0", background: "#fafafa" }}>
+                                        <td colSpan={7} style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#555" }}>
+                                          Story {story.storyId} Total:
+                                        </td>
+                                        <td style={{ ...tdStyle, textAlign: "center" }}>
+                                          <div style={{
+                                            display: "inline-block",
+                                            border: `1px solid ${story.complies === null ? "#9ca3af" : story.complies ? "#16a34a" : "#dc2626"}`,
+                                            borderRadius: 6,
+                                            padding: "2px 8px",
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: story.complies === null ? "#9ca3af" : story.complies ? "#16a34a" : "#dc2626",
+                                            background: "#fff",
+                                          }}>
+                                            {story.totalRatio !== null ? story.totalRatio.toFixed(3) : "—"}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    </React.Fragment>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                                No separated occupancies designated in Module 2.
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })()}
+                  </CollapsiblePanel>
                 </div>
               </section>
             </div>
@@ -2381,6 +2721,262 @@ function computeArea506(project: ProjectState): AreaCalcResult {
   };
 }
 
+interface Accessory508Row {
+  storyId: string;
+  occupancy: string;
+  occKey: OccupancyKey | null;
+  sqft: number;
+  storyArea: number;
+  nsArea: LimitValue;
+  pctStory: number | null;
+  pctNS: number | null;
+  storyComplies: boolean;
+  nsComplies: boolean;
+}
+
+interface Nonseparated508Row {
+  occKey: OccupancyKey | null;
+  displayName: string;
+  maxHeight: LimitValue;
+  maxStories: LimitValue;
+  at: LimitValue;
+  isMostRestrictive: boolean;
+}
+
+interface Separated508StoryRow {
+  storyId: string;
+  type: "Separated" | "Nonseparated";
+  occupancies: string;
+  sqft: number;
+  allowableArea: LimitValue;
+  maxHeight: LimitValue;
+  maxStories: LimitValue;
+  ratio: number | null;
+}
+
+interface Separated508Story {
+  storyId: string;
+  rows: Separated508StoryRow[];
+  totalRatio: number | null;
+  complies: boolean | null;
+}
+
+interface Calc508Result {
+  // Accessory
+  accessoryRows: Accessory508Row[];
+  accessoryMeets: boolean;
+
+  // Nonseparated
+  nonseparatedRows: Nonseparated508Row[];
+  mostRestrictiveNonsep: Nonseparated508Row | null;
+  nonsepHeightComplies: "complies" | "fails" | "unknown";
+  nonsepStoriesComplies: "complies" | "fails" | "unknown";
+  nonsepAreaComplies: "complies" | "fails" | "unknown";
+
+  // Separated
+  separatedStories: Separated508Story[];
+  separatedMeets: boolean;
+}
+
+function compute508(project: ProjectState): Calc508Result {
+  const ct = mapConstructionType(project.m1.constructionType);
+  const storiesAbove = countAboveStories(project);
+  const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+  const actualHeightFt = project.m1.buildingHeight.feet ?? 0;
+  const actualStories = storiesAbove;
+
+  // ── Table 1: Accessory Occupancies ──────────────────────────
+  const accessoryRows: Accessory508Row[] = [];
+
+  for (const story of project.stories) {
+    const storyArea = sumStorySqftFiltered(story);
+    const accessoryAreas = story.areas.filter(a => a.mixedUse === "Accessory Use" && a.occupancy);
+
+    // Group by occupancy within this story
+    const byOcc = new Map<string, number>();
+    for (const a of accessoryAreas) {
+      byOcc.set(a.occupancy, (byOcc.get(a.occupancy) ?? 0) + (a.sqft ?? 0));
+    }
+
+    for (const [occ, sqft] of byOcc.entries()) {
+      const occKey = mapOccupancyKey(occ);
+      const nsArea = occKey && ct ? getAreaFactor(occKey, ct, "NS") : null;
+      const pctStory = storyArea > 0 ? (sqft / storyArea) * 100 : null;
+      const pctNS = nsArea !== null && typeof nsArea === "number" && nsArea > 0
+        ? (sqft / nsArea) * 100
+        : nsArea === "UL" ? 0 : null;
+      const storyComplies = pctStory !== null ? pctStory <= 10 : true;
+      const nsComplies = nsArea === "UL" ? true
+        : nsArea === "NP" ? false
+        : pctNS !== null ? pctNS <= 100 : true;
+
+      accessoryRows.push({
+        storyId: story.id,
+        occupancy: occ.replace(/^Group\s+/i, ""),
+        occKey,
+        sqft,
+        storyArea,
+        nsArea,
+        pctStory,
+        pctNS,
+        storyComplies,
+        nsComplies,
+      });
+    }
+  }
+
+  const accessoryMeets = accessoryRows.every(r => r.storyComplies && r.nsComplies);
+
+  // ── Table 2: Nonseparated Occupancies ───────────────────────
+  const NONSEP_EXCLUDED = [...EXCLUDED_MIXED_USES, "Accessory Use", "Separated Use"];
+
+  const uniqueOccKeys = Array.from(new Map(
+    project.stories.flatMap(s => s.areas
+      .filter(a => !NONSEP_EXCLUDED.includes(a.mixedUse) && a.occupancy)
+      .map(a => {
+        const key = a.occupancyCondition
+          ? a.occupancyCondition as OccupancyKey
+          : mapOccupancyKey(a.occupancy);
+        return key ? [key, a.occupancy] as [OccupancyKey, string] : null;
+      })
+      .filter((x): x is [OccupancyKey, string] => x !== null)
+    )
+  ).entries());
+
+  const nonseparatedRows: Nonseparated508Row[] = ct ? uniqueOccKeys.map(([key, rawOcc]) => ({
+    occKey: key,
+    displayName: rawOcc.replace(/^Group\s+/i, ""),
+    maxHeight: getMaxHeightFt(key, ct, spk),
+    maxStories: getMaxStories(key, ct, spk),
+    at: getAreaFactor(key, ct, spk),
+    isMostRestrictive: false,
+  })) : [];
+
+  // Sort most restrictive first
+  nonseparatedRows.sort((a, b) => {
+    if (a.at === "NP") return -1;
+    if (b.at === "NP") return 1;
+    if (a.at === "UL") return 1;
+    if (b.at === "UL") return -1;
+    if (typeof a.at === "number" && typeof b.at === "number") return a.at - b.at;
+    return 0;
+  });
+
+  if (nonseparatedRows.length > 0) nonseparatedRows[0].isMostRestrictive = true;
+  const mostRestrictiveNonsep = nonseparatedRows[0] ?? null;
+
+  // Nonseparated compliance
+  const nonsepHeightComplies = mostRestrictiveNonsep
+    ? checkCompliance(actualHeightFt, mostRestrictiveNonsep.maxHeight)
+    : "unknown";
+  const nonsepStoriesComplies = mostRestrictiveNonsep
+    ? checkCompliance(actualStories, mostRestrictiveNonsep.maxStories)
+    : "unknown";
+  const nonsepAreaComplies = mostRestrictiveNonsep
+    ? checkCompliance(totalAboveGradeArea(project), mostRestrictiveNonsep.at)
+    : "unknown";
+
+  // ── Table 3: Separated Occupancies ──────────────────────────
+  const separatedStories: Separated508Story[] = [];
+  const mostRestrictiveAt = mostRestrictiveNonsep?.at ?? null;
+
+  for (const story of project.stories) {
+    const nonExcludedAreas = story.areas.filter(a =>
+      !EXCLUDED_MIXED_USES.includes(a.mixedUse) && a.occupancy
+    );
+    if (nonExcludedAreas.length === 0) continue;
+
+    // Separated areas
+    const separatedAreas = nonExcludedAreas.filter(a => a.mixedUse === "Separated Use");
+    // Nonseparated areas (everything else)
+    const nonsepAreas = nonExcludedAreas.filter(a => a.mixedUse !== "Separated Use");
+
+    const rows: Separated508StoryRow[] = [];
+
+    // Separated row — group all separated areas
+    if (separatedAreas.length > 0 && ct) {
+      // Use each separated occupancy's own At
+      // For simplicity group by occupancy, compute ratio per occupancy
+      const bySepOcc = new Map<string, { sqft: number; key: OccupancyKey | null }>();
+      for (const a of separatedAreas) {
+        const key = a.occupancyCondition
+          ? a.occupancyCondition as OccupancyKey
+          : mapOccupancyKey(a.occupancy);
+        const existing = bySepOcc.get(a.occupancy);
+        bySepOcc.set(a.occupancy, {
+          sqft: (existing?.sqft ?? 0) + (a.sqft ?? 0),
+          key,
+        });
+      }
+
+      for (const [occ, { sqft, key }] of bySepOcc.entries()) {
+        const at = key ? getAreaFactor(key, ct, spk) : null;
+        const maxH = key ? getMaxHeightFt(key, ct, spk) : null;
+        const maxS = key ? getMaxStories(key, ct, spk) : null;
+        const ratio = at !== null && typeof at === "number" && at > 0
+          ? sqft / at : at === "UL" ? 0 : null;
+
+        rows.push({
+          storyId: story.id,
+          type: "Separated",
+          occupancies: occ.replace(/^Group\s+/i, ""),
+          sqft,
+          allowableArea: at,
+          maxHeight: maxH,
+          maxStories: maxS,
+          ratio,
+        });
+      }
+    }
+
+    // Nonseparated row — group all nonsep areas, use most restrictive At
+    if (nonsepAreas.length > 0) {
+      const totalNonsepSqft = nonsepAreas.reduce((sum, a) => sum + (a.sqft ?? 0), 0);
+      const occupancyNames = Array.from(new Set(
+        nonsepAreas.map(a => a.occupancy.replace(/^Group\s+/i, ""))
+      )).join(", ");
+
+      const ratio = mostRestrictiveAt !== null && typeof mostRestrictiveAt === "number" && mostRestrictiveAt > 0
+        ? totalNonsepSqft / mostRestrictiveAt
+        : mostRestrictiveAt === "UL" ? 0 : null;
+
+      rows.push({
+        storyId: story.id,
+        type: "Nonseparated",
+        occupancies: occupancyNames,
+        sqft: totalNonsepSqft,
+        allowableArea: mostRestrictiveAt,
+        maxHeight: mostRestrictiveNonsep?.maxHeight ?? null,
+        maxStories: mostRestrictiveNonsep?.maxStories ?? null,
+        ratio,
+      });
+    }
+
+    const totalRatio = rows.every(r => r.ratio !== null)
+      ? rows.reduce((sum, r) => sum + (r.ratio ?? 0), 0)
+      : null;
+    const complies = totalRatio !== null ? totalRatio <= 1.0 : null;
+
+    separatedStories.push({ storyId: story.id, rows, totalRatio, complies });
+  }
+
+  const separatedMeets = separatedStories.length === 0
+    ? true
+    : separatedStories.every(s => s.complies !== false);
+
+  return {
+    accessoryRows,
+    accessoryMeets,
+    nonseparatedRows,
+    mostRestrictiveNonsep,
+    nonsepHeightComplies,
+    nonsepStoriesComplies,
+    nonsepAreaComplies,
+    separatedStories,
+    separatedMeets,
+  };
+}
+
 function formatLimit(limit: LimitValue): string {
   if (limit === null) return "";
   if (limit === "UL") return "Unlimited";
@@ -2400,7 +2996,7 @@ function occupancyGroups(project: ProjectState): string {
   for (const story of project.stories) {
     for (const area of story.areas) {
       const occ = (area.occupancy ?? "").trim();
-      if (occ) set.add(occ);
+      if (occ && area.mixedUse !== "Accessory Use") set.add(occ);
     }
   }
 
@@ -2762,7 +3358,7 @@ const cardStyle: React.CSSProperties = {
 const navBtnStyle: React.CSSProperties = {
   border: "1px solid #cfcfcf",
   borderRadius: 10,
-  padding: "10px 10px",
+  padding: "8px 6px",
   fontSize: 11,
   fontWeight: 700,
   background: "#fafafa",
