@@ -7,7 +7,7 @@ import { ch4Rows } from "@/content/checklists/ch4";
 import { ch5Rows } from "@/content/checklists/ch5";
 import { ch6Rows } from "@/content/checklists/ch6";
 import type { ChecklistChapterResponses } from "@/lib/types";
-import { ProjectState, FrontageState } from "@/lib/types";
+import { ProjectState, FrontageState, FrontageSegment } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
@@ -100,6 +100,7 @@ export default function Home() {
           south: { perimeterLength: null, frontageWidth: null },
           west:  { perimeterLength: null, frontageWidth: null },
           useInterpolated: false,
+          frontageEnabled: false,
         },
         panel504Collapsed: true,
         panel505Collapsed: true,
@@ -1576,7 +1577,7 @@ return (
                         activeModifiers.push({ label: "510 Special Provisions (504.1.2)", noteKey: "specialProvisionsNote" });
 
                       const segInput = (dir: keyof Omit<FrontageState, "useInterpolated">, label: string) => {
-                        const seg = project.m3.frontage[dir];
+                        const seg = project.m3.frontage[dir] as FrontageSegment;
                         return (
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{label}</div>
@@ -1592,7 +1593,7 @@ return (
                                       ...p.m3,
                                       frontage: {
                                         ...p.m3.frontage,
-                                        [dir]: { ...p.m3.frontage[dir], perimeterLength: v },
+                                        [dir]: { ...(p.m3.frontage[dir] as FrontageSegment), perimeterLength: v },
                                       },
                                     },
                                   }))}
@@ -1609,7 +1610,7 @@ return (
                                       ...p.m3,
                                       frontage: {
                                         ...p.m3.frontage,
-                                        [dir]: { ...p.m3.frontage[dir], frontageWidth: v },
+                                        [dir]: { ...(p.m3.frontage[dir] as FrontageSegment), frontageWidth: v },
                                       },
                                     },
                                   }))}
@@ -1834,15 +1835,29 @@ return (
 
     {/* Row 3 — Frontage Increase — 40/60 grid */}
     <div style={{ borderTop: "1px solid #e9e9e9", paddingTop: 20 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 12 }}>
-        Frontage Increase (506.3)
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <Checkbox
+          checked={project.m3.frontage.frontageEnabled}
+          onChange={(checked) => setProject((p) => ({
+            ...p,
+            m3: {
+              ...p.m3,
+              frontage: { ...p.m3.frontage, frontageEnabled: checked },
+            },
+          }))}
+        />
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
+          Frontage Increase (506.3)
+        </div>
       </div>
+
+      {project.m3.frontage.frontageEnabled && (
       <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 40%) 1fr", gap: 24 }}>
 
         {/* Left — direction inputs */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {(["north", "east", "south", "west"] as const).map(dir => {
-            const seg = project.m3.frontage[dir];
+            const seg = project.m3.frontage[dir] as FrontageSegment;
             return (
               <div key={dir} style={{
                 border: "1px solid #e9e9e9",
@@ -1968,7 +1983,9 @@ return (
           ))}
         </div>
       </div>
+      )}
     </div>
+
   </div>
 );
                     })()}
@@ -2579,12 +2596,26 @@ function computeArea506(project: ProjectState): AreaCalcResult {
   const storiesAbove = countAboveStories(project);
   const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
   const frontageResult = computeFrontage(project.m3.frontage);
-  const If = project.m3.frontage.useInterpolated
-    ? frontageResult.interpolatedIf
-    : frontageResult.tabularIf;
+  const If = project.m3.frontage.frontageEnabled
+    ? (project.m3.frontage.useInterpolated
+        ? frontageResult.interpolatedIf
+        : frontageResult.tabularIf)
+    : 0;
 
-  // Sa determination
-  const Sa = (spk === "SM" || spk === "S1" || spk === "S13R") ? 4 : 3;
+  // Sa determination per 506.2.1
+  // Sa = 4 only for Group R with NFPA 13R (903.3.1.2)
+  // Sa = 3 for all other cases where stories > 3
+  // Sa = 4 only when ALL occupancies are Group R and sprinkler is NFPA 13R
+  const nonExcludedOccupancies = project.stories.flatMap(s =>
+    s.areas.filter(a =>
+      !EXCLUDED_MIXED_USES.includes(a.mixedUse) &&
+      a.mixedUse !== "Accessory Use" &&
+      a.occupancy
+    ).map(a => a.occupancy)
+  );
+  const allGroupR = nonExcludedOccupancies.length > 0 &&
+    nonExcludedOccupancies.every(occ => occ.startsWith("Group R"));
+  const Sa = (spk === "S13R" && allGroupR) ? 4 : 3;
 
   // Collect unique occupancy keys — exclude separated occupancies for now
   const rawOccEntries = Array.from(new Map(
@@ -2805,7 +2836,7 @@ function compute508(project: ProjectState): Calc508Result {
       const pctNS = nsArea !== null && typeof nsArea === "number" && nsArea > 0
         ? (sqft / nsArea) * 100
         : nsArea === "UL" ? 0 : null;
-      const storyComplies = pctStory !== null ? pctStory <= 10 : true;
+      const storyComplies = pctStory !== null ? Math.round(pctStory * 10) / 10 <= 10 : true;
       const nsComplies = nsArea === "UL" ? true
         : nsArea === "NP" ? false
         : pctNS !== null ? pctNS <= 100 : true;
@@ -2994,9 +3025,24 @@ function limitColor(actual: number, limit: LimitValue): string {
 function occupancyGroups(project: ProjectState): string {
   const set = new Set<string>();
   for (const story of project.stories) {
+    const storyArea = sumStorySqftFiltered(story);
+    // Group accessory areas by occupancy for this story
+    const accessoryByOcc = new Map<string, number>();
+    for (const area of story.areas) {
+      if (area.mixedUse === "Accessory Use" && area.occupancy) {
+        accessoryByOcc.set(area.occupancy, (accessoryByOcc.get(area.occupancy) ?? 0) + (area.sqft ?? 0));
+      }
+    }
     for (const area of story.areas) {
       const occ = (area.occupancy ?? "").trim();
-      if (occ && area.mixedUse !== "Accessory Use") set.add(occ);
+      if (!occ) continue;
+      if (area.mixedUse === "Accessory Use") {
+        // Only exclude if it actually complies with ≤10% rule
+        const accessorySqft = accessoryByOcc.get(area.occupancy) ?? 0;
+        const pct = storyArea > 0 ? Math.round((accessorySqft / storyArea) * 1000) / 10 : 0;
+        if (pct <= 10) continue; // truly accessory — exclude from list
+      }
+      set.add(occ);
     }
   }
 

@@ -78,6 +78,7 @@ export interface FrontageState {
   south: FrontageSegment;
   west: FrontageSegment;
   useInterpolated: boolean;
+  frontageEnabled: boolean;
 }
 
 export interface Module3State {
