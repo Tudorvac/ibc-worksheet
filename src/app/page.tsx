@@ -7,7 +7,7 @@ import { ch4Rows } from "@/content/checklists/ch4";
 import { ch5Rows } from "@/content/checklists/ch5";
 import { ch6Rows } from "@/content/checklists/ch6";
 import type { ChecklistChapterResponses } from "@/lib/types";
-import { ProjectState, FrontageState, FrontageSegment } from "@/lib/types";
+import { ProjectState, FrontageState, FrontageSegment, StoryKind } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
@@ -113,6 +113,17 @@ export default function Home() {
     });
   });
 
+  const [collapsedStories, setCollapsedStories] = React.useState<Set<string>>(new Set());
+
+  function toggleStoryCollapsed(storyId: string) {
+    setCollapsedStories(prev => {
+      const next = new Set(prev);
+      if (next.has(storyId)) next.delete(storyId);
+      else next.add(storyId);
+      return next;
+    });
+  }
+
   // Auto-collapse nav below 900px
   React.useEffect(() => {
     if (windowWidth < 900) setNavExpanded(false);
@@ -161,7 +172,7 @@ const occKeys = Array.from(new Set(
 
   function updateArea(
     storyId: string,
-    areaNo: 1 | 2 | 3 | 4,
+    areaNo: 1 | 2 | 3 | 4 | 5 | 6,
     patch: Partial<{
       occupancy: string;
       use: string;
@@ -189,9 +200,9 @@ const occKeys = Array.from(new Set(
       ...prev,
       stories: prev.stories.map((s) => {
         if (s.id !== storyId) return s;
-        if (s.areas.length >= 4) return s;
+        if (s.areas.length >= 6) return s;
 
-        const nextAreaNo = (s.areas.length + 1) as 2 | 3 | 4;
+        const nextAreaNo = (s.areas.length + 1) as 2 | 3 | 4 | 5 | 6;
         return {
           ...s,
           areas: [
@@ -212,7 +223,7 @@ const occKeys = Array.from(new Set(
     }));
   }
 
-  function deleteAreaRow(storyId: string, areaNo: 2 | 3 | 4) {
+  function deleteAreaRow(storyId: string, areaNo: 2 | 3 | 4 | 5 | 6) {
     setProject((prev) => ({
       ...prev,
       stories: prev.stories.map((s) => {
@@ -225,7 +236,7 @@ const occKeys = Array.from(new Set(
           .sort((a, b) => a.areaNo - b.areaNo)
           .map((a, idx) => ({
             ...a,
-            areaNo: (idx + 1) as 1 | 2 | 3 | 4,
+            areaNo: (idx + 1) as 1 | 2 | 3 | 4 | 5 | 6,
           }));
 
         return { ...s, areas: renumbered };
@@ -234,6 +245,12 @@ const occKeys = Array.from(new Set(
   }
 
   function removeStory(storyId: string) {
+    const story = project.stories.find(s => s.id === storyId);
+    if (!story) return;
+    if (story.areas.length > 0) {
+      const label = ordinalStoryLabel(story);
+      if (!confirm(`Are you sure you want to delete ${label} and all its areas?`)) return;
+    }
     setProject((prev) => {
       const target = prev.stories.find((s) => s.id === storyId);
       if (!target) return prev;
@@ -283,7 +300,7 @@ const occKeys = Array.from(new Set(
     return pct === 100 ? "100%" : `${pct.toFixed(1)}%`;
   }
 
-  function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4, occ: string) {
+  function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4 | 5 | 6, occ: string) {
   updateArea(storyId, areaNo, { occupancy: occ, use: "", occupancyCondition: "" });
 }
 
@@ -790,171 +807,324 @@ function handleUpdateSections() {
                   </button>
                 </div>
 
-                <div style={tableWrapStyle}>
-                  <table style={tableStyle}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Story</th>
-                        <th style={thStyle}>Area</th>
-                        <th style={thStyle}>Occupancy</th>
-                        {hasGroupI && <th style={thStyle}>Condition</th>}
-                        <th style={thStyle}>Use</th>
-                        <th style={thStyle}>Description</th>
-                        <th style={thRightStyle}>Sq. Ft.</th>
-                        <th style={thRightStyle}>%</th>
-                        <th style={thStyle}>Mixed Use</th>
-                        <th style={thStyle}>Row Controls</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {project.stories.length === 0 ? (
-                        <tr>
-                          <td style={tdStyle} colSpan={hasGroupI ? 10 : 9}>
-                            <em style={{ color: "#555" }}>Increase stories Above or Below Grade using the Module 2 controls above.</em>
-                          </td>
-                        </tr>
-                      ) : (
-                        project.stories.map((story, storyIdx) => {
-                          const isFirstBelowGrade =
-                            story.kind === "below" &&
-                            (storyIdx === 0 || project.stories[storyIdx - 1].kind === "above");
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {project.stories.length === 0 ? (
+                    <div style={{
+                      padding: "16px",
+                      border: "1px solid #d6d6d6",
+                      borderRadius: 12,
+                      color: "#555",
+                      fontSize: 13,
+                      fontStyle: "italic",
+                    }}>
+                      Add stories using the buttons above.
+                    </div>
+                  ) : (
+                    project.stories.map((story) => {
+                      const isCollapsed = collapsedStories.has(story.id);
+                      const storyLabel = ordinalStoryLabel(story);
+                      const storyOccupancies = Array.from(new Set(
+                        story.areas
+                          .filter(a => a.occupancy && a.mixedUse !== "Accessory Use")
+                          .map(a => a.occupancy.replace(/^Group\s+/i, ""))
+                      )).join(", ");
+                      const storyTotal = sumStorySqftFiltered(story);
+                      const ct = mapConstructionType(project.m1.constructionType);
+                      const storiesAbove = countAboveStories(project);
+                      const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+                      const mostRestrictiveKey = (() => {
+                        const keys = story.areas
+                          .filter(a => a.occupancy && !EXCLUDED_MIXED_USES.includes(a.mixedUse))
+                          .map(a => a.occupancyCondition ? a.occupancyCondition as OccupancyKey : mapOccupancyKey(a.occupancy))
+                          .filter((k): k is OccupancyKey => k !== null);
+                        if (!ct || keys.length === 0) return null;
+                        return keys.reduce((worst, k) => {
+                          const a = getAreaFactor(k, ct, spk);
+                          const b = getAreaFactor(worst, ct, spk);
+                          if (a === "NP") return k;
+                          if (b === "NP") return worst;
+                          if (a === "UL") return worst;
+                          if (b === "UL") return k;
+                          if (typeof a === "number" && typeof b === "number") return a < b ? k : worst;
+                          return worst;
+                        });
+                      })();
+                      const maxArea = mostRestrictiveKey && ct ? getAreaFactor(mostRestrictiveKey, ct, spk) : null;
+                      const areaComplies = maxArea === null ? null
+                        : maxArea === "UL" ? true
+                        : maxArea === "NP" ? false
+                        : storyTotal <= (maxArea as number);
+                      const areaColor = areaComplies === null ? "#9ca3af" : areaComplies ? "#16a34a" : "#dc2626";
 
-                          return (
-                            <React.Fragment key={story.id}>
-                              {story.areas.map((area) => {
-                                const occOptions = dropdownData.lists["Occupancy"] ?? [];
-                                const useOptions = dropdownData.usesByOccupancy[area.occupancy] ?? [];
-                                const mixedUseOptions = dropdownData.lists["Mixed Use"] ?? [];
+                      return (
+                        <div key={story.id} style={{
+                          border: "1px solid #d6d6d6",
+                          borderRadius: 12,
+                          overflow: "hidden",
+                          background: "#fff",
+                        }}>
+                          {/* Story Header */}
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "5px 10px",
+                            background: "#f7f7f7",
+                            borderBottom: isCollapsed ? "none" : "1px solid #d6d6d6",
+                            flexWrap: "nowrap",
+                          }}>
+                            {/* Chevron */}
+                            <button
+                              type="button"
+                              onClick={() => toggleStoryCollapsed(story.id)}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                cursor: "pointer",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                color: "#555",
+                                fontSize: 12,
+                                transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                                transition: "transform 120ms ease",
+                                flexShrink: 0,
+                              }}
+                            >▼</button>
 
-                                const isStoryRow = area.areaNo === 1;
+                            {/* Story label */}
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111", flexShrink: 0 }}>
+                              {storyLabel}
+                            </div>
 
-                                const rowStyle: React.CSSProperties = {
-                                  borderBottom: isStoryRow ? "1px solid #d0d0d0" : "1px solid #efefef",
-                                  background: isStoryRow ? "#fafafa" : "#fff",
-                                  borderTop: isStoryRow && isFirstBelowGrade ? "2px solid #a8a8a8" : undefined,
-                                };
+                            {/* Story controls */}
+                            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                style={miniBtnStyle}
+                                onClick={() => removeStory(story.id)}
+                              >
+                                - Story
+                              </button>
+                              <button
+                                type="button"
+                                style={miniBtnStyle}
+                                onClick={() => addArea(story.id)}
+                                disabled={story.areas.length >= 6}
+                              >
+                                + Area
+                              </button>
+                            </div>
 
-                                return (
-                                  <tr key={`${story.id}-${area.areaNo}`} style={rowStyle}>
-                                    <td style={area.areaNo === 1 ? storyCellStyle : tdStyle}>
-                                      {area.areaNo === 1 ? <strong>{story.id}</strong> : ""}
-                                    </td>
+                            {/* Spacer */}
+                            <div style={{ flex: 1 }} />
 
-                                    <td style={tdStyle}>{area.areaNo}</td>
+                            {/* Right side info — occupancies, floor height, total area */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 30, flexShrink: 0 }}>
 
-                                    <td style={{ ...tdStyle, minWidth: 140 }}>
-                                      <TableSelect
-                                        value={area.occupancy}
-                                        options={occOptions}
-                                        placeholder="Occupancy…"
-                                        onChange={(v) => onOccupancyChange(story.id, area.areaNo, v)}
-                                      />
-                                    </td>
-                                    {hasGroupI && (
-                                      <td style={{ ...tdStyle, minWidth: 110 }}>
-                                        {getConditionOptions(area.occupancy).length > 0 ? (
-                                          <TableSelect
-                                            value={getConditionOptions(area.occupancy).find(c => c.tag === area.occupancyCondition)?.label ?? ""}
-                                            options={getConditionOptions(area.occupancy).map(c => c.label)}
-                                            placeholder="Condition…"
-                                            onChange={(v) => {
-                                              const match = getConditionOptions(area.occupancy).find(c => c.label === v);
-                                              updateArea(story.id, area.areaNo, { occupancyCondition: match?.tag ?? "" });
-                                            }}
-                                          />
-                                        ) : (
-                                          <span style={{ color: "#ccc" }}>—</span>
-                                        )}
-                                      </td>
-                                    )}
+                            {/* Occupancies */}
+                            {storyOccupancies && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 11, color: "#888" }}>Occupancies:</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#555" }}>{storyOccupancies}</span>
+                              </div>
+                            )}
 
-                                    <td style={{ ...tdStyle, minWidth: 120 }}>
-                                      <TableSelect
-                                        value={area.use}
-                                        options={useOptions}
-                                        placeholder={area.occupancy ? "Use…" : "Select occupancy first"}
-                                        disabled={!area.occupancy}
-                                        onChange={(v) => updateArea(story.id, area.areaNo, { use: v })}
-                                      />
-                                    </td>
+                            {/* Floor Height — no outer box */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                              <span style={{ fontSize: 11, color: "#888" }}>Floor Height:</span>
+                              <NumBox
+                                placeholder="ft"
+                                value={story.floorHeight?.feet ?? null}
+                                onChange={(v) => setProject(p => ({
+                                  ...p,
+                                  stories: p.stories.map(s => s.id !== story.id ? s : {
+                                    ...s,
+                                    floorHeight: { ...(s.floorHeight ?? { feet: null, inches: null }), feet: v }
+                                  })
+                                }))}
+                                min={0}
+                                subtle
+                              />
+                              <span style={{ fontSize: 11, color: "#555" }}>ft</span>
+                              <NumBox
+                                placeholder="in"
+                                value={story.floorHeight?.inches ?? null}
+                                onChange={(v) => setProject(p => ({
+                                  ...p,
+                                  stories: p.stories.map(s => s.id !== story.id ? s : {
+                                    ...s,
+                                    floorHeight: { ...(s.floorHeight ?? { feet: null, inches: null }), inches: v }
+                                  })
+                                }))}
+                                min={0}
+                                max={11}
+                                subtle
+                              />
+                              <span style={{ fontSize: 11, color: "#555" }}>in</span>
+                              <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                                ({formatFeetInches(story.floorHeight ?? { feet: null, inches: null })})
+                              </span>
+                            </div>
 
-                                    <td style={{ ...tdStyle, minWidth: 120 }}>
-                                      <TableTextInput
-                                        value={area.description}
-                                        placeholder="Room/Area description..."
-                                        onChange={(v) => updateArea(story.id, area.areaNo, { description: v })}
-                                      />
-                                    </td>
+                            {/* Total Story Area */}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 11, color: "#888" }}>Total Story Area:</span>
+                                <div style={{
+                                  border: `1px solid ${areaColor}`,
+                                  borderRadius: 6,
+                                  padding: "3px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: areaColor,
+                                  background: "#fff",
+                                  minWidth: 60,
+                                  textAlign: "center",
+                                }}>
+                                  {storyTotal.toLocaleString()}
+                                </div>
+                              </div>
+                              {maxArea !== null && (
+                                <div style={{ fontSize: 10, color: areaColor, marginTop: 1 }}>
+                                  ({maxArea === "UL" ? "Unlimited" : maxArea === "NP" ? "Not Permitted" : (maxArea as number).toLocaleString()} max)
+                                </div>
+                              )}
+                            </div>
 
-                                    <td style={tdRightStyle}>
-                                      <TableNumberInput
-                                        value={area.sqft}
-                                        placeholder="Sq. Ft."
-                                        onChange={(v) => updateArea(story.id, area.areaNo, { sqft: v })}
-                                      />
-                                    </td>
+                            </div> {/* end right side info */}
+                          </div>
 
-                                    <td style={tdRightStyle}>
-                                      <span style={{ color: "#333", fontWeight: 600 }}>
-                                        {areaPercent(story, area.sqft)}
-                                      </span>
-                                    </td>
+                          {/* Area rows */}
+                          {!isCollapsed && (
+                            <div>
+                              {story.areas.length === 0 ? (
+                                <div style={{
+                                  padding: "10px 16px",
+                                  fontSize: 13,
+                                  color: "#9ca3af",
+                                  fontStyle: "italic",
+                                }}>
+                                  No areas — use + Area to add one.
+                                </div>
+                              ) : (
+                                <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900, tableLayout: "fixed" }}>
+                                  <colgroup>
+                                    <col style={{ width: 50 }} />
+                                    <col style={{ width: 160 }} />
+                                    <col style={{ width: 200 }} />
+                                    <col style={{ width: 160 }} />
+                                    <col style={{ width: 140 }} />
+                                    <col style={{ width: 90 }} />
+                                    <col style={{ width: 50 }} />
+                                    <col style={{ width: 80 }} />
+                                  </colgroup>
+                                  <thead>
+                                    <tr style={{ borderBottom: "1px solid #efefef", background: "#fafafa" }}>
+                                      {["Area", "Occupancy", "Use", "Description", "Mixed-Use", "Sq Ft", "%", "Control"].map((h, i) => (
+                                        <th key={h} style={{
+                                          padding: "2px 8px",
+                                          fontSize: 10,
+                                          fontWeight: 600,
+                                          color: "#aaa",
+                                          textAlign: i === 0 || i === 5 || i === 6 || i === 7 ? "center" : "left",
+                                          whiteSpace: "nowrap",
+                                          borderBottom: "1px solid #efefef",
+                                          background: "#fafafa",
+                                        }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {story.areas.map((area) => {
+                                      const occOptions = dropdownData.lists["Occupancy"] ?? [];
+                                      const useOptions = dropdownData.usesByOccupancy[area.occupancy] ?? [];
+                                      const mixedUseOptions = dropdownData.lists["Mixed Use"] ?? [];
+                                      const conditionOptions = getConditionOptions(area.occupancy);
+                                      const storyTotalForPct = story.areas.reduce((s, a) => s + (a.sqft ?? 0), 0);
 
-                                    <td style={tdStyle}>
-                                      {area.areaNo === 1 ? (
-                                        <span style={{ color: "#666" }}>—</span>
-                                      ) : (
-                                        <TableSelect
-                                          value={area.mixedUse}
-                                          options={mixedUseOptions}
-                                          placeholder="Mixed Use…"
-                                          onChange={(v) => updateArea(story.id, area.areaNo, { mixedUse: v })}
-                                        />
-                                      )}
-                                    </td>
-
-                                    <td style={tdStyle}>
-                                      <div
-                                        style={{
-                                          display: "grid",
-                                          gridTemplateColumns: "1fr 1fr",
-                                          gap: 6,
-                                          width: 132,
-                                        }}
-                                      >
-                                        {area.areaNo === 1 ? (
-                                          <>
-                                            <TableAction
-                                              label="– Story"
-                                              onClick={() => removeStory(story.id)}
-                                              disabled={story.areas.length !== 1}
+                                      return (
+                                        <tr key={area.areaNo} style={{ borderBottom: "1px solid #efefef" }}>
+                                          <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af" }}>
+                                            {area.areaNo}
+                                          </td>
+                                          <td style={{ ...tdStyle, minWidth: 140 }}>
+                                            <TableSelect
+                                              value={area.occupancy}
+                                              options={occOptions}
+                                              placeholder="Occupancy…"
+                                              onChange={(v) => onOccupancyChange(story.id, area.areaNo, v)}
                                             />
-                                            <TableAction
-                                              label="+ Area"
-                                              onClick={() => addArea(story.id)}
-                                              disabled={story.areas.length >= 4}
+                                            {conditionOptions.length > 0 && (
+                                              <div style={{ marginTop: 3 }}>
+                                                <TableSelect
+                                                  value={conditionOptions.find(c => c.tag === area.occupancyCondition)?.label ?? ""}
+                                                  options={conditionOptions.map(c => c.label)}
+                                                  placeholder="Condition…"
+                                                  onChange={(v) => {
+                                                    const match = conditionOptions.find(c => c.label === v);
+                                                    updateArea(story.id, area.areaNo, { occupancyCondition: match?.tag ?? "" });
+                                                  }}
+                                                />
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td style={{ ...tdStyle, minWidth: 120 }}>
+                                            <TableSelect
+                                              value={area.use}
+                                              options={useOptions}
+                                              placeholder={area.occupancy ? "Use…" : "Select occupancy first"}
+                                              disabled={!area.occupancy}
+                                              onChange={(v) => updateArea(story.id, area.areaNo, { use: v })}
                                             />
-                                          </>
-                                        ) : (
-                                          <>
-                                            <span />
+                                          </td>
+                                          <td style={{ ...tdStyle, minWidth: 120 }}>
+                                            <TableTextInput
+                                              value={area.description}
+                                              placeholder="Description…"
+                                              onChange={(v) => updateArea(story.id, area.areaNo, { description: v })}
+                                            />
+                                          </td>
+                                          <td style={{ ...tdStyle, minWidth: 120 }}>
+                                            <TableSelect
+                                              value={area.mixedUse}
+                                              options={mixedUseOptions}
+                                              placeholder="Mixed Use…"
+                                              onChange={(v) => updateArea(story.id, area.areaNo, { mixedUse: v })}
+                                            />
+                                          </td>
+                                          <td style={{ ...tdRightStyle }}>
+                                            <TableNumberInput
+                                              value={area.sqft}
+                                              placeholder="Sq Ft"
+                                              onChange={(v) => updateArea(story.id, area.areaNo, { sqft: v })}
+                                            />
+                                          </td>
+                                          <td style={{ ...tdRightStyle }}>
+                                            <span style={{ color: "#333", fontWeight: 600 }}>
+                                              {storyTotalForPct > 0 && area.sqft
+                                                ? `${((area.sqft / storyTotalForPct) * 100).toFixed(1)}%`
+                                                : "—"}
+                                            </span>
+                                          </td>
+                                          <td style={{ ...tdStyle, textAlign: "center" }}>
                                             <TableAction
                                               label="– Area"
-                                              onClick={() => deleteAreaRow(story.id, area.areaNo as 2 | 3 | 4)}
+                                              onClick={() => deleteAreaRow(story.id, area.areaNo as 2 | 3 | 4 | 5 | 6)}
                                             />
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </React.Fragment>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </section>
             </div>
@@ -2426,6 +2596,14 @@ function largestStoryArea(project: ProjectState): number {
   );
 }
 
+function ordinalStoryLabel(story: { id: string; kind: StoryKind }): string {
+  if (story.kind === "below") return `${story.id} Story`;
+  const n = parseInt(story.id, 10);
+  if (isNaN(n)) return `${story.id} Story`;
+  const suffix = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+  return `${n}${suffix} Story`;
+}
+
 // Table 506.3.3 — Frontage Increase Factor
 // Rows: qualifying % brackets [0-25, 25-50, 50-75, 75-100]
 // Cols: min distance brackets [20-25, 25-30, 30+]
@@ -3352,8 +3530,9 @@ function NumBox(props: {
   onChange: (n: number | null) => void;
   min?: number;
   max?: number;
+  subtle?: boolean;
 }) {
-  const { placeholder, value, onChange, min, max } = props;
+  const { placeholder, value, onChange, min, max, subtle } = props;
 
   return (
     <input
@@ -3372,7 +3551,7 @@ function NumBox(props: {
         onChange(Math.floor(bounded2));
       }}
       style={{
-        border: "1px solid #cfcfcf",
+        border: `1px solid ${subtle ? "#e5e7eb" : "#cfcfcf"}`,
         borderRadius: 8,
         padding: "6px 12px",
         width: 60,

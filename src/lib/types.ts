@@ -32,7 +32,7 @@ export type ApplicabilityRule = {
 };
 
 export interface AreaRow {
-  areaNo: 1 | 2 | 3 | 4;
+  areaNo: 1 | 2 | 3 | 4 | 5 | 6;
   occupancy: OccupancyCode | "";
   use: UseCode | "";
   description: string;
@@ -43,10 +43,11 @@ export interface AreaRow {
 }
 
 export interface Story {
-  id: StoryId;              // display label: "7" or "B2"
+  id: StoryId;              // display label: "1", "2", "B1", "B2"
   kind: StoryKind;          // above/below grade
   orderIndex: number;       // higher = shown first
-  areas: AreaRow[];         // always at least Area 1
+  areas: AreaRow[];         // 0-6 areas
+  floorHeight: FeetInches;  // floor-to-floor height
 }
 
 export interface FeetInches {

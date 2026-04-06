@@ -1,6 +1,6 @@
 import { AreaRow, Story, StoryId } from "./types";
 
-function makeAreaRow(areaNo: 1 | 2 | 3 | 4): AreaRow {
+function makeAreaRow(areaNo: 1 | 2 | 3 | 4 | 5 | 6): AreaRow {
   return {
     areaNo,
     occupancy: "",
@@ -19,6 +19,7 @@ function makeStory(id: StoryId, kind: "above" | "below", orderIndex: number): St
     kind,
     orderIndex,
     areas: [makeAreaRow(1)],
+    floorHeight: { feet: null, inches: null },
   };
 }
 
