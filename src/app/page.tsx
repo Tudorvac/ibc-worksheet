@@ -7,16 +7,11 @@ import { ch4Rows } from "@/content/checklists/ch4";
 import { ch5Rows } from "@/content/checklists/ch5";
 import { ch6Rows } from "@/content/checklists/ch6";
 import type { ChecklistChapterResponses } from "@/lib/types";
-import { ProjectState, FrontageState, FrontageSegment, StoryKind } from "@/lib/types";
+import { ProjectState, FrontageState, FrontageSegment, StoryKind, Module3State } from "@/lib/types";
 import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
 import { saveProject, loadProject } from "@/lib/persistence";
-
-import {
-  // ...existing...
-  type OccupancyKey,
-} from "@/lib/buildingLimits";
 
 import {
   computeNaRowIds,
@@ -36,6 +31,9 @@ import {
   getMostRestrictiveLimit,
   checkCompliance,
   type LimitValue,
+  type OccupancyKey,
+  type SprinklerTag,
+  type ConstructionType,
 } from "@/lib/buildingLimits";
 
 function useWindowWidth(): number {
@@ -163,6 +161,9 @@ const occKeys = Array.from(new Set(
 
   return { maxStories, maxHeightFt, maxAreaFactor, spk, ct };
 }, [project]);
+
+const calc504 = React.useMemo(() => compute504(project), [project]);
+const calc506 = React.useMemo(() => computeArea506(project), [project]);
 
   function scrollToId(id: string) {
     const el = document.getElementById(id);
@@ -303,6 +304,15 @@ const occKeys = Array.from(new Set(
   function onOccupancyChange(storyId: string, areaNo: 1 | 2 | 3 | 4 | 5 | 6, occ: string) {
   updateArea(storyId, areaNo, { occupancy: occ, use: "", occupancyCondition: "" });
 }
+
+const highestFloorHeight = React.useMemo(() => {
+  const aboveStories = project.stories
+    .filter(s => s.kind === "above")
+    .sort((a, b) => b.orderIndex - a.orderIndex);
+  if (aboveStories.length === 0) return null;
+  const top = aboveStories[0];
+  return top.floorHeight ?? null;
+}, [project.stories]);
 
   const [dropdownData, setDropdownData] = React.useState<DropdownData>({
     lists: {},
@@ -644,18 +654,18 @@ function handleUpdateSections() {
                     label="Stories Above Grade"
                     placeholder={String(countAboveStories(project))}
                     muted
-                    hint={buildingLimits ? {
-                      text: `(${formatLimit(buildingLimits.maxStories)} stories max.)`,
-                      color: limitColor(countAboveStories(project), buildingLimits.maxStories),
+                    hint={calc504.maxStories !== null ? {
+                      text: `(${formatLimit(calc504.maxStories)} stories max.)`,
+                      color: limitColor(countAboveStories(project), calc504.maxStories),
                     } : undefined}
                   />
                   <Field
                     label="Total Above-Grade Area"
                     placeholder={totalAboveGradeArea(project).toLocaleString()}
                     muted
-                    hint={buildingLimits ? {
-                      text: `(${formatLimit(buildingLimits.maxAreaFactor)} max.)`,
-                      color: limitColor(totalAboveGradeArea(project), buildingLimits.maxAreaFactor),
+                    hint={calc506.aaTotal !== null ? {
+                      text: `(${formatLimit(calc506.aaTotal)} max.)`,
+                      color: limitColor(totalAboveGradeArea(project), calc506.aaTotal),
                     } : undefined}
                   />
 
@@ -672,6 +682,10 @@ function handleUpdateSections() {
                     label="Total Below-Grade Area"
                     placeholder={totalBelowGradeArea(project).toLocaleString()}
                     muted
+                    hint={calc506.aaStory !== null && totalBelowGradeArea(project) > 0 ? {
+                      text: `(${formatLimit(calc506.aaStory)} max.)`,
+                      color: limitColor(totalBelowGradeArea(project), calc506.aaStory),
+                    } : undefined}
                   />
 
                   <SelectField
@@ -685,15 +699,15 @@ function handleUpdateSections() {
                     label="Building Height"
                     value={project.m1.buildingHeight}
                     onChange={(next) => setProject((p) => ({ ...p, m1: { ...p.m1, buildingHeight: next } }))}
-                    hint={buildingLimits && project.m1.buildingHeight.feet !== null ? {
-                      text: `(${formatLimit(buildingLimits.maxHeightFt)}'-0" max.)`,
-                      color: limitColor(project.m1.buildingHeight.feet, buildingLimits.maxHeightFt),
+                    hint={calc504.maxHeightFt !== null && project.m1.buildingHeight.feet !== null ? {
+                      text: `(${formatAllowableHeight(calc504.maxHeightFt)} max.)`,
+                      color: limitColor(project.m1.buildingHeight.feet, calc504.maxHeightFt),
                     } : undefined}
                   />
-                  <FeetInchesInput
+                  <Field
                     label="Highest Floor"
-                    value={project.m1.highestFloor}
-                    onChange={(next) => setProject((p) => ({ ...p, m1: { ...p.m1, highestFloor: next } }))}
+                    placeholder={highestFloorHeight ? formatFeetInches(highestFloorHeight) : "—"}
+                    muted
                   />
 
                   <SelectField
@@ -789,31 +803,40 @@ function handleUpdateSections() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                <div style={{ marginBottom: 8 }}>
                   <button
                     type="button"
-                    style={miniBtnStyle}
                     onClick={() => setProject((p) => ({ ...p, m1: { ...p.m1, storiesAbove: p.m1.storiesAbove + 1 } }))}
+                    style={{
+                      border: "1px solid #cfcfcf",
+                      borderRadius: 10,
+                      padding: "6px 14px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: "#fafafa",
+                      color: "#333",
+                      cursor: "pointer",
+                      lineHeight: 1.4,
+                      textAlign: "center" as const,
+                    }}
                   >
-                    + Story (Above)
-                  </button>
-
-                  <button
-                    type="button"
-                    style={miniBtnStyle}
-                    onClick={() => setProject((p) => ({ ...p, m1: { ...p.m1, storiesBelow: p.m1.storiesBelow + 1 } }))}
-                  >
-                    + Story (Below)
+                    + Add Story<br />Above Grade
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  border: "1px solid #d0d0d0",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}>
                   {project.stories.length === 0 ? (
                     <div style={{
-                      padding: "16px",
-                      border: "1px solid #d6d6d6",
+                      padding: "14px 16px",
+                      border: "1px solid #d0d0d0",
                       borderRadius: 12,
-                      color: "#555",
+                      color: "#9ca3af",
                       fontSize: 13,
                       fontStyle: "italic",
                     }}>
@@ -832,65 +855,54 @@ function handleUpdateSections() {
                       const ct = mapConstructionType(project.m1.constructionType);
                       const storiesAbove = countAboveStories(project);
                       const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
-                      const mostRestrictiveKey = (() => {
-                        const keys = story.areas
-                          .filter(a => a.occupancy && !EXCLUDED_MIXED_USES.includes(a.mixedUse))
-                          .map(a => a.occupancyCondition ? a.occupancyCondition as OccupancyKey : mapOccupancyKey(a.occupancy))
-                          .filter((k): k is OccupancyKey => k !== null);
-                        if (!ct || keys.length === 0) return null;
-                        return keys.reduce((worst, k) => {
-                          const a = getAreaFactor(k, ct, spk);
-                          const b = getAreaFactor(worst, ct, spk);
-                          if (a === "NP") return k;
-                          if (b === "NP") return worst;
-                          if (a === "UL") return worst;
-                          if (b === "UL") return k;
-                          if (typeof a === "number" && typeof b === "number") return a < b ? k : worst;
-                          return worst;
-                        });
-                      })();
-                      const maxArea = mostRestrictiveKey && ct ? getAreaFactor(mostRestrictiveKey, ct, spk) : null;
-                      const areaComplies = maxArea === null ? null
-                        : maxArea === "UL" ? true
-                        : maxArea === "NP" ? false
-                        : storyTotal <= (maxArea as number);
+                      const totalBelowArea = story.kind === "below"
+                        ? project.stories
+                            .filter(s => s.kind === "below")
+                            .reduce((sum, s) => sum + sumStorySqftFiltered(s), 0)
+                        : null;
+
+                      const areaComplies = calc506.aaStory === null ? null
+                        : calc506.aaStory === "UL" ? true
+                        : calc506.aaStory === "NP" ? false
+                        : story.kind === "below"
+                          ? (totalBelowArea ?? 0) <= (calc506.aaStory as number)
+                          : storyTotal <= (calc506.aaStory as number);
                       const areaColor = areaComplies === null ? "#9ca3af" : areaComplies ? "#16a34a" : "#dc2626";
 
                       return (
                         <div key={story.id} style={{
-                          border: "1px solid #d6d6d6",
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          background: "#fff",
+                          borderBottom: "1px solid #d0d0d0",
+                          borderTop: (() => {
+                            const idx = project.stories.indexOf(story);
+                            const prev = project.stories[idx - 1];
+                            if (story.kind === "below" && (!prev || prev.kind === "above")) {
+                              return "3px solid #333";
+                            }
+                            return "none";
+                          })(),
                         }}>
                           {/* Story Header */}
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: "5px 10px",
-                            background: "#f7f7f7",
-                            borderBottom: isCollapsed ? "none" : "1px solid #d6d6d6",
-                            flexWrap: "nowrap",
-                          }}>
+                          <div
+                            onClick={() => toggleStoryCollapsed(story.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                              padding: "5px 10px",
+                              background: story.kind === "below" ? "#e0e0e0" : "#ebebeb",
+                              borderBottom: isCollapsed ? "none" : "1px solid #d0d0d0",
+                              flexWrap: "nowrap",
+                              cursor: "pointer",
+                              userSelect: "none",
+                            }}>
                             {/* Chevron */}
-                            <button
-                              type="button"
-                              onClick={() => toggleStoryCollapsed(story.id)}
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                cursor: "pointer",
-                                padding: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                color: "#555",
-                                fontSize: 12,
-                                transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                                transition: "transform 120ms ease",
-                                flexShrink: 0,
-                              }}
-                            >▼</button>
+                            <div style={{
+                              fontSize: 11,
+                              color: "#666",
+                              transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                              transition: "transform 120ms ease",
+                              flexShrink: 0,
+                            }}>▼</div>
 
                             {/* Story label */}
                             <div style={{ fontSize: 13, fontWeight: 700, color: "#111", flexShrink: 0 }}>
@@ -898,7 +910,10 @@ function handleUpdateSections() {
                             </div>
 
                             {/* Story controls */}
-                            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <div
+                              style={{ display: "flex", gap: 6, flexShrink: 0 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <button
                                 type="button"
                                 style={miniBtnStyle}
@@ -920,7 +935,10 @@ function handleUpdateSections() {
                             <div style={{ flex: 1 }} />
 
                             {/* Right side info — occupancies, floor height, total area */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 30, flexShrink: 0 }}>
+                            <div
+                              style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
 
                             {/* Occupancies */}
                             {storyOccupancies && (
@@ -985,9 +1003,9 @@ function handleUpdateSections() {
                                   {storyTotal.toLocaleString()}
                                 </div>
                               </div>
-                              {maxArea !== null && (
+                              {calc506.aaStory !== null && (
                                 <div style={{ fontSize: 10, color: areaColor, marginTop: 1 }}>
-                                  ({maxArea === "UL" ? "Unlimited" : maxArea === "NP" ? "Not Permitted" : (maxArea as number).toLocaleString()} max)
+                                  ({formatLimit(calc506.aaStory)} max)
                                 </div>
                               )}
                             </div>
@@ -997,18 +1015,18 @@ function handleUpdateSections() {
 
                           {/* Area rows */}
                           {!isCollapsed && (
-                            <div>
+                            <div style={{ padding: "6px 20px", background: story.kind === "below" ? "#f3f3f3" : "#fafafa" }}>
                               {story.areas.length === 0 ? (
                                 <div style={{
-                                  padding: "10px 16px",
-                                  fontSize: 13,
+                                  padding: "8px 0",
+                                  fontSize: 12,
                                   color: "#9ca3af",
                                   fontStyle: "italic",
                                 }}>
                                   No areas — use + Area to add one.
                                 </div>
                               ) : (
-                                <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900, tableLayout: "fixed" }}>
+                                <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 860, tableLayout: "fixed" }}>
                                   <colgroup>
                                     <col style={{ width: 50 }} />
                                     <col style={{ width: 160 }} />
@@ -1126,10 +1144,31 @@ function handleUpdateSections() {
                     })
                   )}
                 </div>
+
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setProject((p) => ({ ...p, m1: { ...p.m1, storiesBelow: p.m1.storiesBelow + 1 } }))}
+                    style={{
+                      border: "1px solid #cfcfcf",
+                      borderRadius: 10,
+                      padding: "6px 14px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: "#fafafa",
+                      color: "#333",
+                      cursor: "pointer",
+                      lineHeight: 1.4,
+                      textAlign: "center" as const,
+                    }}
+                  >
+                    + Add Story<br />Below Grade
+                  </button>
+                </div>
               </section>
             </div>
 
-            {/* Module 3 — Chapter 5 Analysis */}
+            {/* Module 3 */}
             <div id="mod3" style={{ scrollMarginTop: 12 }}>
               <section style={cardStyle}>
                 <div style={cardHeaderStyle}>
@@ -2767,6 +2806,92 @@ interface AreaCalcResult {
   storyComplies: "complies" | "fails" | "unknown";
   totalComplies: "complies" | "fails" | "unknown";
   basementColor: string;
+}
+
+interface Calc504Result {
+  maxHeightFt: LimitValue;
+  maxStories: LimitValue;
+  spkLabel: string;
+  ctLabel: string;
+  actualHeightFt: number | null;
+  actualStories: number;
+  heightComplies: "complies" | "fails" | "unknown";
+  storiesComplies: "complies" | "fails" | "unknown";
+  occEntries: [OccupancyKey, string][];
+  occupiedRoofRows: { storyId: string; occupancy: string; sqft: number | null }[];
+  activeModifiers: { label: string; noteKey: keyof Module3State }[];
+  spk: SprinklerTag;
+  ct: ConstructionType | null;
+}
+
+function compute504(project: ProjectState): Calc504Result {
+  const ct = mapConstructionType(project.m1.constructionType);
+  const storiesAbove = countAboveStories(project);
+  const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
+  const actualHeightFt = project.m1.buildingHeight.feet;
+  const actualStories = storiesAbove;
+
+  const occEntries = Array.from(new Map(
+    project.stories.flatMap(s => s.areas.map(a => {
+      const key = a.occupancyCondition
+        ? a.occupancyCondition as OccupancyKey
+        : mapOccupancyKey(a.occupancy);
+      return key ? [key, a.occupancy] as [OccupancyKey, string] : null;
+    }).filter((x): x is [OccupancyKey, string] => x !== null))
+  ).entries());
+
+  const maxHeightFt = ct && occEntries.length > 0
+    ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxHeightFt(o, ct, spk)))
+    : null;
+  const maxStories = ct && occEntries.length > 0
+    ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxStories(o, ct, spk)))
+    : null;
+
+  const heightComplies = actualHeightFt !== null && maxHeightFt !== null
+    ? checkCompliance(actualHeightFt, maxHeightFt)
+    : "unknown";
+  const storiesComplies = maxStories !== null
+    ? checkCompliance(actualStories, maxStories)
+    : "unknown";
+
+  const occupiedRoofRows = project.stories
+    .filter(s => s.kind === "above")
+    .flatMap(s => s.areas
+      .filter(a => a.mixedUse === "Occupied Roof")
+      .map(a => ({
+        storyId: s.id,
+        occupancy: a.occupancy.replace(/^Group\s+/i, ""),
+        sqft: a.sqft,
+      }))
+    );
+
+  const activeModifiers: { label: string; noteKey: keyof Module3State }[] = [];
+  if (project.m3.specialIndustrialOccupancy)
+    activeModifiers.push({ label: "Special Industrial Occupancy (503.1.1)", noteKey: "specialIndustrialOccupancyNote" });
+  if (project.m3.oneStoryAircraftHangar)
+    activeModifiers.push({ label: "One-Story Aircraft Hangar (504.1)", noteKey: "oneStoryAircraftHangarNote" });
+  if (project.m3.unlimitedAreaBuilding)
+    activeModifiers.push({ label: "507 Unlimited Area Building", noteKey: "unlimitedAreaBuildingNote" });
+  if (project.m3.specialProvisions)
+    activeModifiers.push({ label: "510 Special Provisions (504.1.2)", noteKey: "specialProvisionsNote" });
+  if (project.m3.rooftopStructures)
+    activeModifiers.push({ label: "1511 Rooftop Structures (504.3)", noteKey: "rooftopStructuresNote" });
+
+  return {
+    maxHeightFt,
+    maxStories,
+    spkLabel: project.m1.sprinklers || "—",
+    ctLabel: project.m1.constructionType || "—",
+    actualHeightFt,
+    actualStories,
+    heightComplies,
+    storiesComplies,
+    occEntries,
+    occupiedRoofRows,
+    activeModifiers,
+    spk,
+    ct,
+  };
 }
 
 function computeArea506(project: ProjectState): AreaCalcResult {
