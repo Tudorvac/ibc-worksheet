@@ -1,6 +1,6 @@
 import { ProjectState } from "./types";
 
-const STORAGE_KEY = "ibc-worksheet-project-v1";
+const STORAGE_KEY = "ibc-worksheet-project-v2";
 
 export function saveProject(project: ProjectState): void {
   try {
