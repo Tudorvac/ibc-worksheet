@@ -12,6 +12,7 @@ import { syncStoriesFromCounts } from "@/lib/storyGeneration";
 import { DropdownData, loadDropdownsXlsx } from "@/lib/dropdownsXlsx";
 import { CollapsiblePanel } from "@/components/CollapsiblePanel";
 import { saveProject, loadProject } from "@/lib/persistence";
+import { PanelInfoTable, type PanelInfoCell } from "@/components/PanelInfoTable";
 
 import {
   computeNaRowIds,
@@ -623,8 +624,8 @@ function handleUpdateSections() {
                     type="button"
                     onClick={() => {
                       if (confirm("Reset the entire worksheet? All inputs will be cleared.")) {
-                        localStorage.removeItem("ibc-worksheet-project-v1");
-                        window.location.reload();
+                        localStorage.removeItem("ibc-worksheet-project-v2");
+                        window.location.replace(window.location.href);
                       }
                     }}
                     style={{
@@ -1243,72 +1244,29 @@ function handleUpdateSections() {
                       m3: { ...p.m3, panel504Collapsed: !p.m3.panel504Collapsed },
                     }))}
                   >
-                    {(() => {
-                      const ct = mapConstructionType(project.m1.constructionType);
-                      const storiesAbove = countAboveStories(project);
-                      const spk = mapSprinklerTag(project.m1.sprinklers, storiesAbove);
-                      const actualFt = project.m1.buildingHeight.feet;
-                      const actualStories = countAboveStories(project);
-
-                      // Unique occupancy keys from Module 2
-                      const occEntries = Array.from(new Map(
-                        project.stories.flatMap(s => s.areas.map(a => {
-                          const key = a.occupancyCondition ? a.occupancyCondition as OccupancyKey : mapOccupancyKey(a.occupancy);
-                          return key ? [key, a.occupancy] as [OccupancyKey, string] : null;
-                        }).filter((x): x is [OccupancyKey, string] => x !== null))
-                      ).entries());
-
-                      // Occupied roof rows from Module 2
-                      const occupiedRoofRows = project.stories
-                        .filter(s => s.kind === "above")
-                        .flatMap(s => s.areas
-                          .filter(a => a.mixedUse === "Occupied Roof")
-                          .map(a => ({
-                            storyId: s.id,
-                            occupancy: a.occupancy.replace(/^Group\s+/i, ""),
-                            sqft: a.sqft,
-                          }))
-                        );
-
-                      // Active height modifiers
-            const activeModifiers: { label: string; noteKey: keyof typeof project.m3 }[] = [];
-            if (project.m3.specialIndustrialOccupancy)
-              activeModifiers.push({ label: "Special Industrial Occupancy (503.1.1)", noteKey: "specialIndustrialOccupancyNote" });
-            if (project.m3.oneStoryAircraftHangar)
-              activeModifiers.push({ label: "One-Story Aircraft Hangar (504.1)", noteKey: "oneStoryAircraftHangarNote" });
-            if (project.m3.unlimitedAreaBuilding)
-              activeModifiers.push({ label: "507 Unlimited Area Building", noteKey: "unlimitedAreaBuildingNote" });
-            if (project.m3.specialProvisions)
-              activeModifiers.push({ label: "510 Special Provisions (504.1.2)", noteKey: "specialProvisionsNote" });
-            if (project.m3.rooftopStructures)
-              activeModifiers.push({ label: "1511 Rooftop Structures (504.3)", noteKey: "rooftopStructuresNote" });
-
-                      // Info bar values
-                      const spkLabel = project.m1.sprinklers || "—";
-                      const ctLabel = project.m1.constructionType || "—";
-                      const heightLabel = actualFt !== null ? formatFeetInches(project.m1.buildingHeight) : "—";
-                      const maxH = ct && occEntries.length > 0
-                        ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxHeightFt(o, ct, spk))) : null;
-                      const maxS = ct && occEntries.length > 0
-                        ? getMostRestrictiveLimit(occEntries.map(([o]) => getMaxStories(o, ct, spk))) : null;
-                      const heightColor = actualFt !== null && maxH !== null ? limitColor(actualFt, maxH) : "#9ca3af";
-                      const storiesColor = maxS !== null ? limitColor(actualStories, maxS) : "#9ca3af";
-
-                      const mutedText: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
-                      const infoBox = (value: string, color?: string): React.CSSProperties => ({
-                        border: `1px solid ${color ?? "#d6d6d6"}`,
-                        borderRadius: 6,
-                        padding: "2px 10px",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: color ?? "#9ca3af",
-                        background: "#fafafa",
-                        minWidth: 60,
-                        textAlign: "center" as const,
-                      });
+                    <>{(() => {
+                      const ct = calc504.ct;
+                      const spk = calc504.spk;
+                      const occEntries = calc504.occEntries;
+                      const occupiedRoofRows = calc504.occupiedRoofRows;
+                      const activeModifiers = calc504.activeModifiers;
+                      const heightColor = calc504.heightComplies === "complies" ? "#16a34a" : calc504.heightComplies === "fails" ? "#dc2626" : undefined;
+                      const storiesColor = calc504.storiesComplies === "complies" ? "#16a34a" : calc504.storiesComplies === "fails" ? "#dc2626" : undefined;
 
 return (
-  <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 40%) 1fr", gap: 24 }}>
+  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+    {/* Info table */}
+    <PanelInfoTable cells={[
+      { label: "Const. Type", value: calc504.ctLabel },
+      { label: "Sprinklers", value: calc504.spkLabel },
+      { label: "Fire Alarm", value: project.m1.fireAlarm || "—" },
+      { label: "Stories", value: String(calc504.actualStories), color: storiesColor },
+      { label: "Height", value: calc504.actualHeightFt !== null ? formatFeetInches(project.m1.buildingHeight) : "—", color: heightColor },
+    ]} />
+
+    {/* 40/60 grid */}
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 40%) 1fr", gap: 24 }}>
     {/* Left column — tables */}
     <div style={{ minWidth: 0 }}>
       <div style={{ marginBottom: 10 }}>
@@ -1378,39 +1336,8 @@ return (
       )}
     </div>
 
-    {/* Right column — info bar (top) + modifiers (bottom) */}
+    {/* Right column — modifiers */}
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-      {/* Info bar — always visible */}
-      <div style={{
-        display: "flex",
-        flexWrap: "nowrap",
-        gap: 10,
-        padding: "10px 12px",
-        background: "#f7f7f7",
-        borderRadius: 10,
-        border: "1px solid #e9e9e9",
-        overflowX: "auto",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={mutedText}>Sprinkler:</span>
-          <div style={infoBox(spkLabel)}>{spkLabel}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={mutedText}>Const. Type:</span>
-          <div style={infoBox(ctLabel)}>{ctLabel}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={mutedText}>Height:</span>
-          <div style={infoBox(heightLabel, heightColor)}>{heightLabel}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={mutedText}>Stories:</span>
-          <div style={infoBox(String(actualStories), storiesColor)}>{actualStories}</div>
-        </div>
-      </div>
-
-      {/* Modifiers — only if any are checked */}
       {activeModifiers.length > 0 && (
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
@@ -1446,9 +1373,9 @@ return (
         </div>
       )}
     </div>
-  </div>
-);
-                    })()}
+  </div>  {/* end 40/60 grid */}
+  </div>  
+  );})()}</>
                   </CollapsiblePanel>
 
                   <CollapsiblePanel
@@ -1593,8 +1520,20 @@ return (
                         );
                       }
 
+                      const mezzTotal = project.stories.flatMap(s => s.areas).filter(a => a.mixedUse === "Mezzanine").reduce((sum, a) => sum + (a.sqft ?? 0), 0);
+                      const equipTotal = project.stories.flatMap(s => s.areas).filter(a => a.mixedUse === "Equipment Platform").reduce((sum, a) => sum + (a.sqft ?? 0), 0);
+
                       return (
                           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                            {/* Info table */}
+                            <PanelInfoTable cells={[
+                              { label: "Const. Type", value: calc504.ctLabel },
+                              { label: "Sprinklers", value: calc504.spkLabel },
+                              { label: "Fire Alarm", value: project.m1.fireAlarm || "—" },
+                              { label: "Stories", value: String(calc504.actualStories) },
+                              { label: "Mezz. Area", value: mezzTotal > 0 ? mezzTotal.toLocaleString() : "—", color: mezzTotal > 0 ? "#16a34a" : undefined },
+                              { label: "Equip. Plat.", value: equipTotal > 0 ? equipTotal.toLocaleString() : "—", color: equipTotal > 0 ? "#16a34a" : undefined },
+                            ]} />
                             {/* Row 1 — title/notes (40%) + info bar (60%) */}
                             <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 40%) 1fr", gap: 24 }}>
                               {/* Left: sub-section title + auto-notes */}
@@ -1613,32 +1552,8 @@ return (
                                 )}
                               </div>
 
-                              {/* Right: info bar */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                <div style={{
-                                  display: "flex",
-                                  flexWrap: "nowrap",
-                                  gap: 10,
-                                  padding: "10px 12px",
-                                  background: "#f7f7f7",
-                                  borderRadius: 10,
-                                  border: "1px solid #e9e9e9",
-                                  overflowX: "auto",
-                                }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={mutedText}>Sprinkler:</span>
-                                    <div style={infoBox(spkLabel)}>{spkLabel}</div>
-                                  </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={mutedText}>Const. Type:</span>
-                                    <div style={infoBox(ctLabel)}>{ctLabel}</div>
-                                  </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={mutedText}>Fire Alarm:</span>
-                                    <div style={infoBox(fireAlarmLabel)}>{fireAlarmLabel}</div>
-                                  </div>
-                                </div>
-                              </div>
+                              {/* Right: info bar — now in PanelInfoTable above */}
+                              <div />
                             </div>
 
                             {/* Row 2 — full width table */}
@@ -1831,9 +1746,20 @@ return (
                       };
 
                       return (
-  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-    {/* Row 1 — 40/60 grid: occupancy table | info bar + modifiers */}
+                          {/* Info table */}
+                          <PanelInfoTable cells={[
+                            { label: "Const. Type", value: calc504.ctLabel },
+                            { label: "Sprinklers", value: spkLabel },
+                            { label: "Fire Alarm", value: project.m1.fireAlarm || "—" },
+                            { label: "Stories", value: storiesLabel },
+                            { label: "Basement Area", value: calc.totalBelow > 0 ? calc.totalBelow.toLocaleString() : "—", color: calc.totalBelow > 0 ? calc.basementColor : undefined },
+                            { label: "Largest Story", value: calc.largestStory > 0 ? calc.largestStory.toLocaleString() : "—", color: calc.largestStory > 0 ? storyColor : undefined },
+                            { label: "Building Area", value: calc.totalAbove > 0 ? calc.totalAbove.toLocaleString() : "—", color: calc.totalAbove > 0 ? totalColor : undefined },
+                          ]} />
+
+                          {/* Row 1 — 40/60 grid: occupancy table | modifiers */}
     <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 40%) 1fr", gap: 24 }}>
 
       {/* Left — occupancy table */}
@@ -1883,64 +1809,8 @@ return (
         )}
       </div>
 
-      {/* Right — actual areas + info bar + modifiers */}
+      {/* Right — modifiers only, info now in PanelInfoTable */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-        {/* Actual building areas — top row */}
-        <div style={{
-          display: "flex",
-          flexWrap: "nowrap",
-          gap: 10,
-          padding: "10px 12px",
-          background: "#f7f7f7",
-          borderRadius: 10,
-          border: "1px solid #e9e9e9",
-          overflowX: "auto",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Basement Area:</span>
-            <div style={{ ...infoBox(calc.totalBelow > 0 ? calc.totalBelow.toLocaleString() : "—", calc.basementColor), color: calc.basementColor, border: `1px solid ${calc.basementColor}` }}>
-              {calc.totalBelow > 0 ? calc.totalBelow.toLocaleString() : "—"}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Largest Story:</span>
-            <div style={{ ...infoBox(calc.largestStory > 0 ? calc.largestStory.toLocaleString() : "—", storyColor), color: storyColor, border: `1px solid ${storyColor}` }}>
-              {calc.largestStory > 0 ? calc.largestStory.toLocaleString() : "—"}
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Total Above-Grade:</span>
-            <div style={{ ...infoBox(calc.totalAbove > 0 ? calc.totalAbove.toLocaleString() : "—", totalColor), color: totalColor, border: `1px solid ${totalColor}` }}>
-              {calc.totalAbove > 0 ? calc.totalAbove.toLocaleString() : "—"}
-            </div>
-          </div>
-        </div>
-
-        {/* Info bar */}
-        <div style={{
-          display: "flex",
-          flexWrap: "nowrap",
-          gap: 10,
-          padding: "10px 12px",
-          background: "#f7f7f7",
-          borderRadius: 10,
-          border: "1px solid #e9e9e9",
-          overflowX: "auto",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Sprinkler:</span>
-            <div style={infoBox(spkLabel)}>{spkLabel}</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Const. Type:</span>
-            <div style={infoBox(ctLabel)}>{ctLabel}</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={mutedText}>Stories:</span>
-            <div style={infoBox(storiesLabel)}>{storiesLabel}</div>
-          </div>
-        </div>
 
         {activeModifiers.length > 0 && (
           <div>
@@ -2268,48 +2138,15 @@ return (
                       return (
                         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-                          {/* Info bar */}
-                          <div style={{
-                            display: "flex",
-                            flexWrap: "nowrap",
-                            gap: 10,
-                            padding: "10px 12px",
-                            background: "#f7f7f7",
-                            borderRadius: 10,
-                            border: "1px solid #e9e9e9",
-                            overflowX: "auto",
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={mutedText}>Sprinkler:</span>
-                              <div style={infoBox(spkLabel)}>{spkLabel}</div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={mutedText}>Const. Type:</span>
-                              <div style={infoBox(ctLabel)}>{ctLabel}</div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={mutedText}>Stories:</span>
-                              <div style={infoBox(storiesLabel)}>{storiesLabel}</div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={mutedText}>Building Height:</span>
-                              <div style={infoBox(
-                                project.m1.buildingHeight.feet !== null ? formatFeetInches(project.m1.buildingHeight) : "—",
-                                complianceColor(calc.nonsepHeightComplies)
-                              )}>
-                                {project.m1.buildingHeight.feet !== null ? formatFeetInches(project.m1.buildingHeight) : "—"}
-                              </div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={mutedText}>Total Above-Grade:</span>
-                              <div style={infoBox(
-                                totalAboveGradeArea(project).toLocaleString(),
-                                complianceColor(calc.nonsepAreaComplies)
-                              )}>
-                                {totalAboveGradeArea(project).toLocaleString()}
-                              </div>
-                            </div>
-                          </div>
+                          {/* Info table */}
+                          <PanelInfoTable cells={[
+                            { label: "Const. Type", value: ctLabel },
+                            { label: "Sprinklers", value: spkLabel },
+                            { label: "Fire Alarm", value: project.m1.fireAlarm || "—" },
+                            { label: "Stories", value: storiesLabel },
+                            { label: "Height", value: project.m1.buildingHeight.feet !== null ? formatFeetInches(project.m1.buildingHeight) : "—", color: complianceColor(calc.nonsepHeightComplies) !== "#9ca3af" ? complianceColor(calc.nonsepHeightComplies) : undefined },
+                            { label: "Building Area", value: totalAboveGradeArea(project).toLocaleString(), color: complianceColor(calc.nonsepAreaComplies) !== "#9ca3af" ? complianceColor(calc.nonsepAreaComplies) : undefined },
+                          ]} />
 
                           {/* Table 1 — Accessory Occupancies */}
                           <div>
