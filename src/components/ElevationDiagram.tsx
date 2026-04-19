@@ -17,9 +17,9 @@ const DIAGRAM_MAX_HEIGHT = 600; // px before scrolling
 interface StoryBlock {
   occupancy: string;
   sqft: number;
+  mixedUse: string;
   isMezzanine: boolean;
   isOccupiedRoof: boolean;
-  separatorStyle: "none" | "dashed" | "solid"; // divider on LEFT edge of this block
 }
 
 interface StoryRow {
@@ -108,6 +108,8 @@ export function ElevationDiagram({ project }: { project: ProjectState }) {
         .reduce((sum, a) => sum + (a.sqft ?? 0), 0)
     : 1;
 
+    const separatedTypes = ["Separated Use", "Incidental Use", "Control Area"];
+
   // Build story rows
   const storyRows: StoryRow[] = allStories.map(story => {
     const heightFt = story.floorHeight?.feet ?? DEFAULT_STORY_HEIGHT_FT;
@@ -123,24 +125,19 @@ export function ElevationDiagram({ project }: { project: ProjectState }) {
 
     let blocks: StoryBlock[] = [];
 
-    const separatedTypes = ["Separated Use", "Incidental Use", "Control Area"];
-
 // All displayable areas (not excluded)
 const displayAreas = story.areas.filter(a =>
   !["Equipment Platform", "Penthouse"].includes(a.mixedUse) && a.occupancy
 ).slice(0, MAX_BLOCKS_PER_STORY);
 
 blocks = displayAreas.map((a, idx) => {
-  const isSep = separatedTypes.includes(a.mixedUse);
-  const prevArea = idx > 0 ? displayAreas[idx - 1] : null;
-  const prevIsSep = prevArea ? separatedTypes.includes(prevArea.mixedUse) : false;
   return {
-    occupancy: a.occupancy,
-    sqft: a.sqft ?? 0,
-    isMezzanine: a.mixedUse === "Mezzanine",
-    isOccupiedRoof: a.mixedUse === "Occupied Roof",
-    separatorStyle: idx === 0 ? "none" : (isSep || prevIsSep) ? "solid" : "dashed",
-  };
+  occupancy: a.occupancy,
+  sqft: a.sqft ?? 0,
+  mixedUse: a.mixedUse,
+  isMezzanine: a.mixedUse === "Mezzanine",
+  isOccupiedRoof: a.mixedUse === "Occupied Roof",
+};
 });
 
 // Add occupied roof if present and not already included
@@ -150,20 +147,9 @@ if (roofAreas.length > 0 && !blocks.some(b => b.isOccupiedRoof)) {
     sqft: roofAreas.reduce((sum, a) => sum + (a.sqft ?? 0), 0),
     isMezzanine: false,
     isOccupiedRoof: true,
-    separatorStyle: blocks.length === 0 ? "none" : "dashed",
+    mixedUse: "Occupied Roof",
   });
 }
-
-      // Add occupied roof as empty block
-      if (roofAreas.length > 0) {
-        blocks.push({
-          occupancy: "Occupied Roof",
-          sqft: roofAreas.reduce((sum, a) => sum + (a.sqft ?? 0), 0),
-          isMezzanine: false,
-          isOccupiedRoof: true,
-          separatorStyle: "dashed" as const,
-        });
-      }
 
     const totalSqft = blocks.reduce((sum, b) => sum + b.sqft, 0);
 
@@ -278,6 +264,16 @@ const getElevationSuffix = (row: StoryRow): string => {
           const isGradeTop = row.story.kind === "below" && rowIdx > 0 && storyRows[rowIdx - 1].story.kind === "above";
           const hasElevation = row.elevation !== null && row.story.floorHeight?.feet !== null;
           
+          // One divider per interior boundary between blocks
+          const dividers: ("dashed" | "solid" | "perimeter")[] = row.blocks.slice(0, -1).map((b, i) => {
+            const next = row.blocks[i + 1];
+            if (b.isOccupiedRoof || next.isOccupiedRoof) return "perimeter";
+            const isSep =
+              separatedTypes.includes(b.mixedUse) ||
+              separatedTypes.includes(next.mixedUse);
+            return isSep ? "solid" : "dashed";
+          });
+
           return (
             <div key={row.story.id}>
               {isGradeTop && (
@@ -312,8 +308,6 @@ const getElevationSuffix = (row: StoryRow): string => {
                   <div style={{
                     display: "flex",
                     width: storyWidthPx,
-                    border: "1px solid #333",
-                    borderBottom: "none",
                     overflow: "hidden",
                     background: row.story.kind === "below" ? "#e8e8e8" : "#fff",
                   }}>
@@ -321,23 +315,22 @@ const getElevationSuffix = (row: StoryRow): string => {
                       const blockPct = row.totalSqft > 0
                         ? block.sqft / row.totalSqft
                         : 1 / row.blocks.length;
-                      const blockWidth = Math.max(MIN_BLOCK_WIDTH, blockPct * storyWidthPx);
+                      const blockWidth = blockPct * storyWidthPx;
                       const bgColor = block.isOccupiedRoof
                         ? "transparent"
                         : getOccupancyColor(block.occupancy);
                       const textColor = block.isOccupiedRoof
                         ? "#555"
                         : getOccupancyTextColor(block.occupancy);
-                      const label = block.isOccupiedRoof
-                        ? "Occupied Roof"
-                        : getOccupancyLabel(block.occupancy);
+                      const label = getOccupancyLabel(block.occupancy);
 
                       return (
                         <div
                           key={blockIdx}
+                          title={`${label}${block.sqft > 0 ? ` — ${block.sqft.toLocaleString()} sf` : ""}${block.mixedUse ? ` (${block.mixedUse})` : ""}`}
                           style={{
                             width: blockWidth,
-                            minWidth: MIN_BLOCK_WIDTH,
+                            minWidth: 0,
                             background: bgColor,
                             display: "flex",
                             flexDirection: "column",
@@ -345,18 +338,24 @@ const getElevationSuffix = (row: StoryRow): string => {
                             justifyContent: "center",
                             padding: "4px 6px",
                             position: "relative",
-                            ...(block.isOccupiedRoof ? {
-                            borderTop: "none",
-                            borderRight: "none",
-                            borderBottom: "1px dashed #aaa",
-                            borderLeft: "none",
-                          } : {
-                            borderLeft: block.separatorStyle === "solid"
-                              ? "1.5px solid #111"
-                              : block.separatorStyle === "dashed"
-                              ? "1px dashed rgba(0,0,0,0.3)"
-                              : "none",
-                          }),
+                            borderTop: block.isOccupiedRoof ? "none" : "1px solid #222",
+                            borderBottom: "1px solid #222",
+                            borderLeft: block.isOccupiedRoof ? "none"
+                              : blockIdx === 0
+                                ? "1px solid #222"
+                                : dividers[blockIdx - 1] === "solid"
+                                    ? "1.5px solid #111"
+                                    : dividers[blockIdx - 1] === "perimeter"
+                                      ? "1px solid #222"
+                                      : "1px dashed rgba(0,0,0,0.3)",
+                            borderRight: block.isOccupiedRoof ? "none"
+                              : blockIdx === row.blocks.length - 1
+                                ? "1px solid #222"
+                                : dividers[blockIdx] === "solid"
+                                    ? "1.5px solid #111"
+                                    : dividers[blockIdx] === "perimeter"
+                                      ? "1px solid #222"
+                                      : "1px dashed rgba(0,0,0,0.3)",
                           }}
                         >
                           {/* Mezzanine indicator */}
@@ -373,16 +372,29 @@ const getElevationSuffix = (row: StoryRow): string => {
                               <div style={{ width: 24, height: 1.5, background: textColor }} />
                             </div>
                           )}
-                          <div style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: textColor,
-                            textAlign: "center",
-                            lineHeight: 1.2,
-                          }}>
-                            {label}
-                          </div>
-                          {block.sqft > 0 && (
+                          {blockWidth >= 40 && block.isOccupiedRoof && (
+                            <div style={{
+                              fontSize: 8,
+                              color: textColor,
+                              opacity: 0.7,
+                              textAlign: "center",
+                              marginBottom: 2,
+                            }}>
+                              Occupied Roof
+                            </div>
+                          )}
+                          {blockWidth >= 40 && (
+                            <div style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: textColor,
+                              textAlign: "center",
+                              lineHeight: 1.2,
+                            }}>
+                              {label}
+                            </div>
+                          )}
+                          {blockWidth >= 70 && block.sqft > 0 && (
                             <div style={{
                               fontSize: 10,
                               color: textColor,
