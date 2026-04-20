@@ -6,8 +6,8 @@ import { getOccupancyColor, getOccupancyTextColor, getOccupancyLabel } from "@/l
 import { OccupancyKey, LimitValue, getAreaFactor, mapConstructionType, mapSprinklerTag, mapOccupancyKey } from "@/lib/buildingLimits";
 
 const EXCLUDED_MIXED_USES = ["Mezzanine", "Equipment Platform", "Occupied Roof", "Penthouse"];
-const BASE_ROW_HEIGHT = 64; // px for a 10ft story
-const BASE_STORY_HEIGHT_FT = 10;
+const BASE_ROW_HEIGHT = 48; // px for a 10ft story
+const BASE_STORY_HEIGHT_FT = 12;
 const DEFAULT_STORY_HEIGHT_FT = 10;
 const MIN_BLOCK_WIDTH = 80; // px minimum block width
 const MAX_BLOCKS_PER_STORY = 6;
@@ -80,7 +80,7 @@ export function ElevationDiagram({ project }: { project: ProjectState }) {
     .sort((a, b) => b.orderIndex - a.orderIndex);
   const belowStories = project.stories
     .filter(s => s.kind === "below")
-    .sort((a, b) => a.orderIndex - b.orderIndex);
+    .sort((a, b) => b.orderIndex - a.orderIndex);
 
   const allStories = [...aboveStories, ...belowStories];
 
