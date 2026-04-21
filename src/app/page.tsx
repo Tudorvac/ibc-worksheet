@@ -610,14 +610,16 @@ function handleUpdateSections() {
           {/* RIGHT COLUMN (all panels stacked) */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     
-            {/* Module 1 + Visual Panel side by side */}
-            <div id="mod1" style={{ scrollMarginTop: 12, display: "grid", gridTemplateColumns: "minmax(280px, 35%) 1fr", gap: 14, alignItems: "start" }}>
+            {/* Module 1 — unified panel */}
+            <div id="mod1" style={{ scrollMarginTop: 12 }}>
               <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
+
+                {/* Header */}
+                <div style={{ ...cardHeaderStyle, marginBottom: 0, paddingBottom: 12, borderBottom: "1px solid #f0f0f0" }}>
                   <div>
                     <div style={moduleTagStyle}>MOD 1</div>
                     <h2 style={cardTitleStyle}>Building Summary</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#888", marginTop: 2 }}>
                       This module contains general building information.
                     </p>
                   </div>
@@ -640,180 +642,209 @@ function handleUpdateSections() {
                       cursor: "pointer",
                       lineHeight: 1.3,
                       whiteSpace: "nowrap",
+                      flexShrink: 0,
                     }}
                   >
                     Reset<br />Worksheet
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Two-column body */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
 
-                  {/* Group 1 — Occupancy */}
-                  <Field
-                    label="Occupancy Groups"
-                    placeholder={occupancyGroups(project)}
-                    muted
-                  />
+                  {/* Left column — form fields */}
+                  <div style={{ padding: "14px 16px 14px 0", borderRight: "1px solid #f0f0f0" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-                  <div style={{ borderTop: "1px solid #f0f0f0" }} />
+                      <Field
+                        label="Occupancy Groups"
+                        placeholder={occupancyGroups(project)}
+                        muted
+                      />
 
-                  {/* Group 2 — Construction inputs */}
-                  <SelectField
-                    label="Construction Type"
-                    value={project.m1.constructionType}
-                    options={dropdownData.lists["Construction Type"] ?? []}
-                    onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, constructionType: v } }))}
-                  />
-                  <SelectField
-                    label="Sprinklers"
-                    value={project.m1.sprinklers}
-                    options={dropdownData.lists["Fire Sprinklers"] ?? []}
-                    placeholder="Select…"
-                    onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, sprinklers: v } }))}
-                  />
-                  <SelectField
-                    label="Fire Alarm"
-                    value={project.m1.fireAlarm}
-                    options={dropdownData.lists["Fire Alarm"] ?? []}
-                    placeholder="Select…"
-                    onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, fireAlarm: v } }))}
-                  />
-
-                  <div style={{ borderTop: "1px solid #f0f0f0" }} />
-
-                  {/* Group 3 — Derived building data */}
-                  <Field
-                    label="Stories Above Grade"
-                    placeholder={String(countAboveStories(project))}
-                    muted
-                    hint={calc504.maxStories !== null ? {
-                      text: `(${formatLimit(calc504.maxStories)} stories max.)`,
-                      color: limitColor(countAboveStories(project), calc504.maxStories),
-                    } : undefined}
-                  />
-                  <Field label="Stories Below Grade" placeholder={String(countBelowStories(project))} muted />
-                  <FeetInchesInput
-                    label="Building Height"
-                    value={project.m1.buildingHeight}
-                    onChange={(next) => setProject((p) => ({ ...p, m1: { ...p.m1, buildingHeight: next } }))}
-                    hint={calc504.maxHeightFt !== null && project.m1.buildingHeight.feet !== null ? {
-                      text: `(${formatAllowableHeight(calc504.maxHeightFt)} max.)`,
-                      color: limitColor(project.m1.buildingHeight.feet, calc504.maxHeightFt),
-                    } : undefined}
-                  />
-                  <Field
-                    label="Highest Floor"
-                    placeholder={highestFloorHeight ? formatFeetInches(highestFloorHeight) : "—"}
-                    muted
-                  />
-                  <Field
-                    label="Total Above-Grade Area"
-                    placeholder={totalAboveGradeArea(project).toLocaleString()}
-                    muted
-                    hint={calc506.aaTotal !== null ? {
-                      text: `(${formatLimit(calc506.aaTotal)} max.)`,
-                      color: limitColor(totalAboveGradeArea(project), calc506.aaTotal),
-                    } : undefined}
-                  />
-                  <Field
-                    label="Total Below-Grade Area"
-                    placeholder={totalBelowGradeArea(project).toLocaleString()}
-                    muted
-                    hint={calc506.aaStory !== null && totalBelowGradeArea(project) > 0 ? {
-                      text: `(${formatLimit(calc506.aaStory)} max.)`,
-                      color: limitColor(totalBelowGradeArea(project), calc506.aaStory),
-                    } : undefined}
-                  />
-
-                  {hasGroupI && (
-                    <>
                       <div style={{ borderTop: "1px solid #f0f0f0" }} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>
-                          Persons Receiving Care
+
+                      <SelectField
+                        label="Construction Type"
+                        value={project.m1.constructionType}
+                        options={dropdownData.lists["Construction Type"] ?? []}
+                        onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, constructionType: v } }))}
+                      />
+                      <SelectField
+                        label="Sprinklers"
+                        value={project.m1.sprinklers}
+                        options={dropdownData.lists["Fire Sprinklers"] ?? []}
+                        placeholder="Select…"
+                        onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, sprinklers: v } }))}
+                      />
+                      <SelectField
+                        label="Fire Alarm"
+                        value={project.m1.fireAlarm}
+                        options={dropdownData.lists["Fire Alarm"] ?? []}
+                        placeholder="Select…"
+                        onChange={(v) => setProject((p) => ({ ...p, m1: { ...p.m1, fireAlarm: v } }))}
+                      />
+
+                      {hasGroupI && (
+                        <>
+                          <div style={{ borderTop: "1px solid #f0f0f0" }} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>
+                              Persons Receiving Care
+                            </div>
+                            <input
+                              inputMode="numeric"
+                              placeholder="# of custodial/medical/nursing/restraint"
+                              value={project.m1.personsReceivingCare ?? ""}
+                              onChange={(e) => {
+                                const raw = e.target.value.trim();
+                                const n = raw === "" ? null : Math.max(0, Math.floor(Number(raw)));
+                                setProject((p) => ({
+                                  ...p,
+                                  m1: { ...p.m1, personsReceivingCare: n },
+                                }));
+                              }}
+                              style={{
+                                border: "1px solid #cfcfcf",
+                                borderRadius: 10,
+                                padding: "6px 10px",
+                                fontSize: 13,
+                                background: "#fff",
+                                color: "#111",
+                                fontWeight: 500,
+                                width: "100%",
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div style={{ borderTop: "1px solid #f0f0f0" }} />
+
+                      {/* Height & Area Modifiers */}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 8 }}>
+                          Height &amp; Area Modifiers
                         </div>
-                        <input
-                          inputMode="numeric"
-                          placeholder="# of custodial/medical/nursing/restraint"
-                          value={project.m1.personsReceivingCare ?? ""}
-                          onChange={(e) => {
-                            const raw = e.target.value.trim();
-                            const n = raw === "" ? null : Math.max(0, Math.floor(Number(raw)));
-                            setProject((p) => ({
-                              ...p,
-                              m1: { ...p.m1, personsReceivingCare: n },
-                            }));
-                          }}
-                          style={{
-                            border: "1px solid #cfcfcf",
-                            borderRadius: 10,
-                            padding: "6px 10px",
-                            fontSize: 13,
-                            background: "#fff",
-                            color: "#111",
-                            fontWeight: 500,
-                            width: "100%",
-                          }}
-                        />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {([
+                            { key: "specialIndustrialOccupancy", label: "Special Industrial Occupancy (503.1.1)" },
+                            { key: "oneStoryAircraftHangar", label: "One-Story Aircraft Hangar (504.1)" },
+                            { key: "unlimitedAreaBuilding", label: "507 Unlimited Area Building" },
+                            { key: "specialProvisions", label: "510 Special Provisions (504.1.2)" },
+                            { key: "rooftopStructures", label: "1511 Rooftop Structures (504.3)" },
+                          ] as { key: keyof typeof project.m3; label: string }[]).map(({ key, label }) => (
+                            <label
+                              key={key}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                fontSize: 12,
+                                color: "#333",
+                                cursor: "pointer",
+                                userSelect: "none",
+                              }}
+                            >
+                              <Checkbox
+                                checked={project.m3[key] as boolean}
+                                onChange={(checked) => setProject((p) => ({
+                                  ...p,
+                                  m3: { ...p.m3, [key]: checked },
+                                }))}
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </>
-                  )}
 
-                  <div style={{ borderTop: "1px solid #f0f0f0" }} />
-
-                  {/* Group 4 — Height & Area Modifiers */}
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 8 }}>
-                      Height & Area Modifiers
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {([
-                        { key: "specialIndustrialOccupancy", label: "Special Industrial Occupancy (503.1.1) — height and area exemption" },
-                        { key: "oneStoryAircraftHangar", label: "One-Story Aircraft Hangar (504.1) — height modifiers" },
-                        { key: "unlimitedAreaBuilding", label: "507 Unlimited Area Building — height and area modifiers" },
-                        { key: "specialProvisions", label: "510 Special Provisions (504.1.2) — height and area modifiers" },
-                        { key: "rooftopStructures", label: "1511 Rooftop Structures (504.3) — height modifier" },
-                      ] as { key: keyof typeof project.m3; label: string }[]).map(({ key, label }) => (
-                        <label
-                          key={key}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            fontSize: 12,
-                            color: "#333",
-                            cursor: "pointer",
-                            userSelect: "none",
-                          }}
-                        >
-                          <Checkbox
-                            checked={project.m3[key] as boolean}
-                            onChange={(checked) => setProject((p) => ({
-                              ...p,
-                              m3: { ...p.m3, [key]: checked },
-                            }))}
-                          />
-                          {label}
-                        </label>
-                      ))}
                     </div>
                   </div>
 
-                </div>
-              </section>
-
-              {/* Visual Panel */}
-              <section style={cardStyle}>
-                <div style={cardHeaderStyle}>
-                  <div>
-                    <div style={moduleTagStyle}>MOD 1</div>
-                    <h2 style={cardTitleStyle}>Building Elevation Diagram</h2>
-                    <p style={{ margin: "4px 0 0", fontSize: 14, color: "#555", fontWeight: 400 }}>
-                      Visual representation of building stories, occupancies, and areas.
-                    </p>
+                  {/* Right column — elevation diagram, vertically centered */}
+                  <div style={{
+                    padding: "14px 0 14px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10, textAlign: "center", width: "100%" }}>
+                      Building Elevation Diagram
+                    </div>
+                    <ElevationDiagram project={project} />
                   </div>
+
                 </div>
-                <ElevationDiagram project={project} />
+
+                {/* Bottom 3-column stats row */}
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  borderTop: "1px solid #f0f0f0",
+                }}>
+
+                  {/* Col 1 — Area */}
+                  <div style={{ padding: "12px 16px 12px 0", borderRight: "1px solid #f0f0f0", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Field
+                      label="Total Above-Grade Area"
+                      placeholder={totalAboveGradeArea(project).toLocaleString()}
+                      muted
+                      hint={calc506.aaTotal !== null ? {
+                        text: `(${formatLimit(calc506.aaTotal)} max.)`,
+                        color: limitColor(totalAboveGradeArea(project), calc506.aaTotal),
+                      } : undefined}
+                    />
+                    <Field
+                      label="Total Below-Grade Area"
+                      placeholder={totalBelowGradeArea(project).toLocaleString()}
+                      muted
+                      hint={calc506.aaStory !== null && totalBelowGradeArea(project) > 0 ? {
+                        text: `(${formatLimit(calc506.aaStory)} max.)`,
+                        color: limitColor(totalBelowGradeArea(project), calc506.aaStory),
+                      } : undefined}
+                    />
+                  </div>
+
+                  {/* Col 2 — Stories */}
+                  <div style={{ padding: "12px 16px", borderRight: "1px solid #f0f0f0", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Field
+                      label="Stories Above Grade"
+                      placeholder={String(countAboveStories(project))}
+                      muted
+                      hint={calc504.maxStories !== null ? {
+                        text: `(${formatLimit(calc504.maxStories)} stories max.)`,
+                        color: limitColor(countAboveStories(project), calc504.maxStories),
+                      } : undefined}
+                    />
+                    <Field
+                      label="Stories Below Grade"
+                      placeholder={String(countBelowStories(project))}
+                      muted
+                    />
+                  </div>
+
+                  {/* Col 3 — Height */}
+                  <div style={{ padding: "12px 0 12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <FeetInchesInput
+                      label="Building Height"
+                      value={project.m1.buildingHeight}
+                      onChange={(next) => setProject((p) => ({ ...p, m1: { ...p.m1, buildingHeight: next } }))}
+                      hint={calc504.maxHeightFt !== null && project.m1.buildingHeight.feet !== null ? {
+                        text: `(${formatAllowableHeight(calc504.maxHeightFt)} max.)`,
+                        color: limitColor(project.m1.buildingHeight.feet, calc504.maxHeightFt),
+                      } : undefined}
+                    />
+                    <Field
+                      label="Highest Floor"
+                      placeholder={highestFloorHeight ? formatFeetInches(highestFloorHeight) : "—"}
+                      muted
+                    />
+                  </div>
+
+                </div>
+
               </section>
             </div>
 
