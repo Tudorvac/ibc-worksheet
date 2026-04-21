@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+IBC Plan Review Worksheet
 
-## Getting Started
+A modular, open-source worksheet system for structured building code plan review under the International Building Code (IBC) and related codes. Developed with the goal of making rigorous code analysis accessible at every stage of a project's design lifecycle.
 
-First, run the development server:
+Purpose
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This worksheet provides a consistent, code-referenced framework for evaluating buildings and structures against applicable code requirements. It is designed to support plan review at multiple stages of design — from early conceptual planning through construction documents — giving designers, reviewers, and owners a reliable tool for code compliance analysis before permit or bid submission.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Design Stages Supported
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The worksheet is intended to be useful across the full arc of a project:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Pre-Planning / Conceptual — Establish baseline code parameters early: occupancy classification, construction type, allowable height and area, and applicable code path.
+- Schematic & Design Development — Check evolving design decisions against code requirements as the project takes shape.
+- Construction Documents (CD) / QA-QC — Conduct a thorough, structured review of completed documents prior to permit submission or bid.
 
-## Learn More
+Scope
 
-To learn more about Next.js, take a look at the following resources:
+The worksheet is organized by IBC chapter and built to be modular — individual sections can be used independently or as part of a complete project review. The system is intended to cover any building or structure within the scope of the applicable code.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Long-Term Vision
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Expand coverage to multiple IBC editions to support projects reviewed under different code cycles
+- Extend to related codes, including NFPA 101 (Life Safety Code) and potentially others
+- Build toward a tool that practitioners anywhere can adapt and use in their own workflow
 
-## Deploy on Vercel
+Status
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Active early development. Core structure and initial modules are in progress.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Code Reference
+
+Worksheet logic references the International Building Code (IBC), published by the International Code Council (ICC), and will expand to reference additional codes as the project grows.
+
+Disclaimer
+
+This worksheet is not a substitute for professional judgment or official plan review. Users are responsible for verifying all code references against the applicable adopted edition in their 
+jurisdiction.
